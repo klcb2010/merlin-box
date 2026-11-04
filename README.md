@@ -2,186 +2,188 @@
 
 #### 🌐 Languages
 
-- English
-- [简体中文](README.zh-CN.md)
+- 简体中文
+- [English](README.md)
 
+基于 **ASUSWRT-Merlin** 路由器环境的 **sing-box + smartdns** 分流代理脚本方案。
 
-A **sing-box + smartdns** routing and proxy script solution based on the **ASUSWRT-Merlin** router environment.
+本项目目标是把职责拆分清晰：
 
-This project aims to clearly separate responsibilities:
+- 🛰️ sing-box 只负责代理转发
+- 🌐 smartdns 负责域名解析与域名分流
+- 📦 ipset + iptables/ip6tables 负责 IP 分流与透明代理引流
 
-- 🛰️ sing-box is only responsible for proxy forwarding
-- 🌐 smartdns is responsible for DNS resolution and domain routing
-- 📦 ipset + iptables/ip6tables is responsible for IP routing and transparent proxy forwarding
+#### 🎥 快速入门教程
 
-#### 🎥 Quick Start Tutorial
+> 💡 **点击下方缩略图观看视频演示：**
 
-> 💡 **Click the thumbnail below to watch the video demonstration:**
-
-- Tutorial on Using WEB UI
+- UI模式使用教程
 
 [![视频教程](https://img.youtube.com/vi/KaHPKXHDzBU/default.jpg)](https://youtu.be/KaHPKXHDzBU)
 
-- Tutorial on Using Script Mode
+- 脚本模式使用教程
 
 [![视频教程](https://img.youtube.com/vi/0-dqQMX74sE/default.jpg)](https://www.youtube.com/watch?v=0-dqQMX74sE&list=PLDyvs8NWsF2w)
 
+
+
 ---
 
-# 📋 Features and Limitations
+# 📋 功能与限制
 
 <table>
   <thead>
     <tr>
-      <th width="180">Item</th>
-      <th width="160">Status</th>
-      <th>Description</th>
+      <th width="180">项目</th>
+      <th width="120">状态</th>
+      <th>说明</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td>IPv4 / IPv6</td>
-      <td>✅ Supported</td>
+      <td>✅ 已支持</td>
       <td>
-        Automatically detects IPv6 on startup; enables it if available, automatically downgrades to IPv4 if not available.<br>
-        You can manually disable IPv6 by modifying the MB_ENABLE_IPV6 variable in merlin-box.sh.
+        启动时自动检测 IPv6，可用则启用，不可用则自动降级到 IPv4。<br>
+        可修改 merlin-box.sh 中的 MB_ENABLE_IPV6 变量值手动禁用 IPv6。
       </td>
     </tr>
     <tr>
-      <td>IPv4 / IPv6 Routing</td>
-      <td>✅ Supported</td>
+      <td>IPv4 / IPv6 分流</td>
+      <td>✅ 已支持</td>
       <td>
         ipset + iptables/ip6tables
       </td>
     </tr>
     <tr>
-      <td>Block LAN-side QUIC <br />UDP 443</td>
-      <td>✅ Handled</td>
+      <td>屏蔽 LAN 侧 QUIC <br />UDP 443</td>
+      <td>✅ 已处理</td>
       <td>
-        Blocks by default (DROP UDP 443) to prevent UDP direct connection leaks.<br>
-        You can disable this by modifying the MB_DISABLE_QUIC_FROM_LAN variable in merlin-box.sh.
+        默认拦截（DROP UDP 443），避免 UDP 直连泄露。<br>
+        可修改 merlin-box.sh 中的 MB_DISABLE_QUIC_FROM_LAN 变量手动禁用拦截功能。
       </td>
     </tr>
     <tr>
-      <td>smartdns Resolution Routing</td>
-      <td>✅ Supported</td>
+      <td>smartdns 解析分流</td>
+      <td>✅ 已支持</td>
       <td>
-        smartdns replaces dnsmasq to handle DNS resolution and domain routing.
+        由 smartdns 替代 dnsmasq 承担 DNS 解析与域名分流。
       </td>
     </tr>
     <tr>
-      <td>Ad Blocking</td>
-      <td>✅ Supported</td>
+      <td>广告拦截</td>
+      <td>✅ 已支持</td>
       <td>
-        Implemented through configuring the site-blocklist.txt blackhole domain list.
+        通过配置 site-blocklist.txt 黑洞域名列表实现。
       </td>
     </tr>
     <tr>
-      <td>Domain Blacklist</td>
-      <td>✅ Supported</td>
+      <td>域名黑名单</td>
+      <td>✅ 已支持</td>
       <td>
-        Implemented through configuring the site-blacklist.txt blacklist domain list to force specified domains through the proxy.
+        通过配置 site-blacklist.txt 黑名单域名列表使指定域名强制走代理。
       </td>
     </tr>
     <tr>
-      <td>Domain Whitelist</td>
-      <td>✅ Supported</td>
+      <td>域名白名单</td>
+      <td>✅ 已支持</td>
       <td>
-        Implemented through configuring the site-whitelist.txt whitelist domain list to force specified domains to direct connection.
+        通过配置 site-whitelist.txt 白名单域名列表使指定域名强制直连。
       </td>
     </tr>
     <tr>
-      <td>Custom HOSTS</td>
-      <td>✅ Supported</td>
+      <td>自定义HOSTS</td>
+      <td>✅ 已支持</td>
       <td>
-        Implemented through configuring the hosts.txt file for custom HOSTS, commonly used by developers to resolve domain names within the local network for debugging.
+        通过配置 hosts.txt 文件实现自定义 HOSTS，常用于开发人员在局域网中解析域名做调试。
       </td>
     </tr>
     <tr>
-      <td>IP Whitelist</td>
-      <td>✅ Supported</td>
+      <td>IP白名单</td>
+      <td>✅ 已支持</td>
       <td>
-        Implemented through configuring ip4-whitelist.txt and ip6-whitelist.txt files to force specified IPs to direct connection.
+        通过配置 ip4-whitelist.txt 和 ip6-whitelist.txt 文件实现，使指定 IP 强制直连。
       </td>
     </tr>
     <tr>
-      <td>IP Blacklist</td>
-      <td>✅ Supported</td>
+      <td>IP黑名单</td>
+      <td>✅ 已支持</td>
       <td>
-        Implemented through configuring ip4-blacklist.txt and ip6-blacklist.txt files to force specified IPs through the proxy.
+        通过配置 ip4-blacklist.txt 和 ip6-blacklist.txt 文件实现，使指定 IP 强制走代理。
       </td>
     </tr>
     <tr>
       <td>UDP</td>
-      <td>✅ Supported</td>
+      <td>✅ 已支持</td>
       <td>
-        UDP is disabled by default. To use UDP proxy, change the MB_ENABLE_UDP variable value in merlin-box.sh to 1.
+        UDP默认是关闭的，若需要使用 UDP 代理，需要将 merlin-box.sh 中的 MB_ENABLE_UDP 变量值修改为 1。
       </td>
     </tr>
     <tr>
-      <td>Router Itself</td>
-      <td>✅ Supported</td>
+      <td>路由自身</td>
+      <td>✅ 已支持</td>
       <td>
-        TCP proxy only, disabled by default. To enable, change the MB_ENABLE_ONESELF_PROXY variable value in merlin-box.sh to 1.
+        仅 TCP 代理，默认关闭。需要将 merlin-box.sh 中的 MB_ENABLE_ONESELF_PROXY 变量值修改为 1。 
       </td>
     </tr>
     <tr>
-      <td>Device Blacklist</td>
-      <td>✅ Supported</td>
+      <td>设备黑名单</td>
+      <td>✅ 已支持</td>
       <td>
-        Prevents neighbors from accidentally entering the <b>Lost Forest🌳</b>. Configure neighbors' device MAC addresses in device_blacklist.txt.
+        防止邻居蹭网误入 <b>迷失深林🌳</b> 。 在 device_blacklist.txt 中配置邻居设备的 MAC 地址即可。
       </td>
     </tr>
     <tr>
-      <td>Device Whitelist</td>
-      <td>✅ Supported</td>
+      <td>设备白名单</td>
+      <td>✅ 已支持</td>
       <td>
-        Using a whitelist prevents unauthorized guests from accidentally entering the <b>Lost Forest🌳</b>. Configure common device MAC addresses in device_whitelist.txt.
+        使用白名单可以防止未授权的来宾用户误入 <b>迷失深林🌳</b> 。 在 device_whitelist.txt 中配置常用设备 MAC 地址即可。
       </td>
     </tr>
     <tr>
       <td>UI</td>
-      <td>✅ Supported</td>
+      <td>✅ 已支持</td>
       <td>
-        WEB UI is started using ./merlin-box.sh server.
+        执行 ./merlin-box.sh server 启动WEB UI。
       </td>
     </tr>
     <tr>
-      <td>Software Center</td>
-      <td>✅ Supported</td>
+      <td>软件中心</td>
+      <td>✅ 已支持</td>
       <td>
-        The package file supports installation in the KoolCenter Software Center.
+        打包文件支持在KoolCenter软件中心安装。
       </td>
     </tr>
     <tr>
-      <td>Subscription</td>
-      <td>✅ Supported</td>
+      <td>订阅</td>
+      <td>✅ 已支持</td>
       <td>
-        Subscription parsing currently supports VLESS, VMess, Trojan, and Shadowsocks protocols, with compatibility for both standard URL and Base64-encoded formats.
+        目前支持解析包含 VLESS、VMess、Trojan、Shadowsocks 协议的订阅，兼容标准 URL 及 Base64 编码格式。
       </td>
     </tr>
     <tr>
-      <td>Ping Proxy</td>
-      <td>⏳ Not Supported</td>
+      <td>ping 代理</td>
+      <td>⏳ 不支持</td>
       <td>
-        Not in the current proxy scope.
+        不在当前代理范围内。
       </td>
     </tr>
   </tbody>
 </table>
 
-### 💡 Notes
+### 💡 说明
 
-- UDP proxy requires support from upstream nodes, and sing-box needs to be configured with an outbound that supports UDP.
-- Proxy functionality for the router itself requires adding a redirect inbound in the sing-box configuration.
-- IPv6 requires both local network and upstream server support; when MB_ENABLE_IPV6=1, the script will automatically detect local network IPv6 availability and automatically downgrade to IPv4 if unavailable.
-- ⚠️ The script cannot detect whether the upstream server supports IPv6. If the upstream does not support IPv6 and MB_ENABLE_IPV6=1, since IPv6 priority mode will be used, you may not be able to connect to the internet.
-- QUIC is part of UDP. Regardless of whether UDP proxy is enabled, the project adopts an interception scheme (DROP UDP 443), which means websites that rely on H3/QUIC will not be able to access via QUIC on the client side (usually falls back to TCP/TLS; some sites may fail to open or behave abnormally).
-- ⚠️ Device blacklist and whitelist functionality depends on whether device_blacklist.txt/device_whitelist.txt files exist. As long as the files exist, the script will enable the blacklist/whitelist functionality. If you do not need this feature, please delete these two files.
-- WEB UI is started using ./merlin-box.sh server, with the default port being 8080. You can specify a port when starting: ./merlin-box.sh server 8081. The default login username/password is admin/merlinbox.
+- UDP 代理需要上游节点支持，且 sing-box 需要配置支持 UDP 的出站。
+- 路由自身的代理功能需要在 sing-box 配置中添加一条 redirect 入站。
+- IPv6 需要本地网络和上游服务器均支持；MB_ENABLE_IPV6=1 时脚本会自动检测本地网络 IPv6 可用性，不可用时自动降级到 IPv4 流程。
+- ⚠️脚本无法检测上游服务器是否支持 IPv6，若上游不支持 IPv6，且 MB_ENABLE_IPV6=1，由于会走IPV6优先模式，可能导致无法上网。
+- QUIC 属于 UDP，无论是否开启 UDP 代理，项目均采取拦截方案（DROP UDP 443），因此会导致依赖 H3/QUIC 的网站在客户端侧无法以 QUIC 访问（通常会回退到 TCP/TLS；个别站点可能表现为打不开或异常）。
+- ⚠️设备黑白名单功能依赖 device_blacklist.txt/device_whitelist.txt 文件是否存在，只要文件存在，脚本就会启用黑/白名单功能，如果不需要此功能，请删除这两个文件。
+- WEB UI 使用 ./merlin-box.sh server 启动，默认端口为 8080，可以启动时指定端口号：./merlin-box.sh server 8081 。登录用户名密码默认为 admin/merlinbox。
+
 ---
 
-# 🖥️ UI Preview
+# 🖥️ UI 预览
 
 <a href="ui/images/login.webp">
   <img src="ui/images/login.webp" width="120" alt="登录界面">
@@ -220,124 +222,124 @@ This project aims to clearly separate responsibilities:
 
 ---
 
-# ⚙️ Core Execution Logic
+# ⚙️ 核心运行逻辑
 
-## 🌍 Domain Routing (smartdns)
+## 🌍 域名分流（smartdns）
 
-- `res/chn-site.txt` serves as the domain collection
-- Matching domain -> Use China DNS upstream for resolution (`china` group)
-- Other domains -> Use international DNS upstream (`foreign` group, proxied through socks5 by default)
+- `res/chn-site.txt` 作为域名集合
+- 命中域名 -> 使用中国 DNS 上游解析（`china` 组）
+- 其他域名 -> 走国际 DNS 上游（`foreign` 组，默认经 socks5 代理）
 
-smartdns configuration:
+smartdns 配置：
 
-- Configuration file: `conf/smartdns.conf`
-- Configuration reference: https://pymumu.github.io/smartdns/en/configuration/
+- 配置文件 `conf/smartdns.conf`
+- 配置参考 https://pymumu.github.io/smartdns/en/configuration/
 
 ---
 
-## 📡 IP Routing (ipset + iptables/ip6tables)
+## 📡 IP 分流（ipset + iptables/ip6tables）
 
-- `res/chn-ip4.txt`, `res/chn-ip6.txt` serve as the IP subnet collection
-- Loaded into ipset collections on startup:
-    - IPv4: `merlinkbox_chn`
-    - IPv6: `merlinkbox_chn_v6`
-- Matching IP collection -> Direct connection pass-through
-- Non-matching -> Transparent proxy forwarding to sing-box TPROXY port
+- `res/chn-ip4.txt`、`res/chn-ip6.txt` 作为 IP 网段集合
+- 启动时加载到 ipset 集合：
+    - IPv4：`merlinkbox_chn`
+    - IPv6：`merlinkbox_chn_v6`
+- 命中 IP 集合 -> 直连放行
+- 未命中 -> 透明代理引流到 sing-box TPROXY 端口
 
-Optional whitelist files:
+可选白名单文件：
 
-- IPs in these whitelists will be treated as direct connections:
+- 在此白名单中的 IP 将被视为直连。
     - `res/ip4-whitelist.txt`
     - `res/ip6-whitelist.txt`
 
 ---
 
-## 🚀 Proxy Execution (sing-box)
+## 🚀 代理执行（sing-box）
 
-- Inbound:
-    - SOCKS: `65001` (for smartdns foreign upstream to resolve through proxy)
-    - TPROXY: `65002` (for transparent proxy receiving)
-    - REDIRECT: `65003` (for the router itself to access through the proxy)
-- Outbound: Configure yourself in `conf/config.json`
+- 入站：
+    - SOCKS：`65001`（供 smartdns foreign 上游经代理解析）
+    - TPROXY：`65002`（供透明代理接收）
+    - REDIRECT：`65003`（供路由自身经代理访问）
+- 出站：在 `conf/config.json` 自行配置
 
-sing-box (conf/config.json) configuration reference:
+sing-box（conf/config.json）配置参考：
 
 - https://sing-box.sagernet.org/configuration/
 
 ---
 
-# 📁 Directory Structure
+# 📁 目录结构
 
 ```text
 merlin-box/
-├─ merlin-box.sh            # Main entry script (start/stop)
-├─ start_merlin_box.sh      # For boot startup support
-├─ install.sh               # KoolCenter Software Center installation script
-├─ uninstall.sh             # KoolCenter Software Center uninstallation script
-├─ webs                     # KoolCenter Software Center web page files
-├─ ui/                      # WEB UI Development Directory
-│  ├─ server                # WEB UI server
-│  └─ front                 # WEB UI front-end
-├─ wwwroot/                 # WEB UI static files
-├─ db/                      # WEB UI database
-│  └─ db.json               # WEB UI database file, note to change the login username and password after first obtaining it, the password is an md5 encrypted string
+├─ merlin-box.sh            # 主入口脚本（start/stop）
+├─ start_merlin_box.sh      # 用于支持开机启动
+├─ install.sh               # KoolCenter 软件中心安装脚本
+├─ uninstall.sh             # KoolCenter 软件中心卸载脚本
+├─ webs                     # KoolCenter 软件中心网页文件
+├─ ui/                      # WEB UI 开发目录
+│  ├─ server                # WEB UI 后端
+│  └─ front                 # WEB UI 前端
+├─ wwwroot/                 # WEB UI 静态资源
+├─ db/                      # WEB UI 数据库
+│  └─ db.json               # WEB UI 数据库文件，注意第一次拿到后修改登录用户名密码，密码是md5加密后的字符串
 ├─ bin/
-│  ├─ sing-box              # sing-box executable
-│  ├─ smartdns              # smartdns executable
-│  └─ merlin-box             # WEB UI server executable
+│  ├─ sing-box              # sing-box 可执行文件
+│  ├─ smartdns              # smartdns 可执行文件
+│  └─ merlin-box             # WEB UI server 可执行文件
 ├─ conf/
-│  ├─ config.json           # sing-box configuration
-│  └─ smartdns.conf         # smartdns configuration
+│  ├─ config.json           # sing-box 配置
+│  └─ smartdns.conf         # smartdns 配置
 ├─ scripts/
-│  ├─ merlinbox_webui.sh    # KoolCenter Software Center backend script
-│  └─ dnsmasq.postconf      # dnsmasq post-processing script (used when taking over port 53)
+│  ├─ merlinbox_webui.sh    # KoolCenter 软件中心后端脚本
+│  └─ dnsmasq.postconf      # dnsmasq 后处理脚本（接管 53 端口时使用）
 ├─ sh/
-│  ├─ fun.sh                # Core logic
-│  └─ tool.sh               # Implementation of tool subcommands
+│  ├─ fun.sh                # 核心逻辑
+│  └─ tool.sh               # tool 子命令的实现
 ├─ tools/
-│  ├─ sub2box/              # Tool for converting subscriptions to sing-box configuration
-│  └─ update-rules/         # Rule update scripts
+│  ├─ sub2box/              # 用于将订阅转换为 sing-box 配置的工具
+│  └─ update-rules/         # 规则更新脚本
 └─ res/
-   ├─ chn-ip4.txt           # China IPv4
-   ├─ chn-ip6.txt           # China IPv6
-   ├─ chn-site.txt          # China domain list
-   ├─ device_blacklist.txt  # Device blacklist (devices cannot use proxy)
-   ├─ device_whitelist.txt  # Device whitelist (only authorized devices can use proxy)
-   ├─ site-blocklist.txt    # Blocked domain list (blackhole)
-   └─ site-blacklist.txt    # Blacklist domain list (force proxy)
+   ├─ chn-ip4.txt           # 中国 IPv4
+   ├─ chn-ip6.txt           # 中国 IPv6
+   ├─ chn-site.txt          # 中国域名列表
+   ├─ device_blacklist.txt  # 设备黑名单列表(设备不能走代理)
+   ├─ device_whitelist.txt  # 设备白名单列表(仅允许的设备可以走代理)
+   ├─ site-blocklist.txt    # 屏蔽域名列表(进入黑洞)
+   └─ site-blacklist.txt    # 黑名单域名列表(强制走代理)
 ```
 
-### ⚠️ Notes
+### ⚠️ 注意
 
-- The script will by default look for `bin/sing-box` and `bin/smartdns` in the project to start related services and redirect console output to `logs/sing-box.log` and `logs/smartdns.log`.
-- The binary files included have been tested on the following devices (limited devices available for testing).
+- 脚本默认会在项目中找 `bin/sing-box` 与 `bin/smartdns` 来启动相关服务，并将控制台输出重定向到 `logs/sing-box.log` 和 `logs/smartdns.log`。
+- 目前包含的二进制文件在下面的设备上测试通过（没有更多机型供测试）。
 
-| Model    | SINGBOX          | SMARTDNS         |
+| 型号     | SINGBOX          | SMARTDNS         |
 |----------|------------------|------------------|
 | RT-BE86U | linux-arm64-musl | smartdns-aarch64 |
 | RT-AC86U | linux-arm64-musl | smartdns-aarch64 |
 
 ---
 
-# 🖥️ Applicable Environments and Device Notes
+# 🖥️ 适用环境与机型说明
 
-- ✅ Tested Models: RT-BE86U, RT-AC86U.
-- ✅ Architecture Support: Pre-built packages are provided for ARM64 (64-bit) and ARM (32-bit). Download the appropriate package from the Release page.
-- ⏳ More Models: Due to limited access to hardware, additional models have not yet been tested. In theory, any ASUSWRT-Merlin router with an ARM64 or ARM (32-bit) CPU architecture should be able to run Merlin-box. If you encounter any issues, please report them in Issues.
-- 💾 Storage: Some routers have limited JFFS storage. Although the binary has been compressed, you may still run out of space. It is recommended to place the program on a USB drive or other external storage.
-- 📂 Installation Directory: Merlin-box can run from any directory, but /jffs/merlin-box is recommended.
+- ✅ 已测试机型：RT-BE86U、RT-AC86U。
+- ✅ 架构支持：项目提供 ARM64（64 位） 和 ARM（32 位） 版本，可在 Release 页面下载对应架构的程序包。
+- ⏳ 更多机型：受设备条件限制，暂未对更多机型进行测试。理论上，只要是 ASUSWRT-Merlin 系列路由器，且 CPU 架构为 ARM64 或 ARM（32 位），均可尝试运行。如遇问题，欢迎在 Issues 中反馈。
+- 💾 存储空间：部分路由器的 JFFS 空间较小，虽然程序二进制文件已经经过压缩，仍可能存在空间不足的情况。建议将程序目录放在 U 盘等外部存储设备上。
+- 📂 安装目录：程序支持在任意目录下运行，推荐放置于 /jffs/merlin-box 目录。
 
 ---
 
-# 🚀 Quick Deployment
+# 🚀 快速部署
 
-## 📦 Prepare Files
+## 📦 准备文件
 
-1. Download the package matching your router's CPU architecture from the Release page, then upload the project files to your router. It is recommended to place them in /jffs/merlin-box.
-2. Optional: This project provides ARM64 (64-bit) and ARM (32-bit) versions. If the included binaries are not compatible with your router's CPU architecture, you can try downloading the appropriate binaries from the sing-box and SmartDNS repositories and replacing the corresponding files in the project.
+1. 在 Release 页面下载与你的路由器 CPU 架构对应的程序包，并将项目文件上传至路由器。推荐放置在 /jffs/merlin-box 目录下。
+2. 可选：本项目提供 ARM64（64 位） 和 ARM（32 位） 版本。如果你的路由器 CPU 架构与程序包不匹配，可以尝试从 sing-box 和 SmartDNS 项目仓库下载对应架构的二进制文件，并替换项目中的相关文件。
     - `bin/sing-box`
     - `bin/smartdns`
-3. Grant execute permissions (example):
+3. 给予执行权限（示例）：
 
 ```bash
 chmod +x merlin-box.sh
@@ -346,151 +348,153 @@ chmod +x merlin-box.sh
 
 ---
 
-## ▶️Start UI and Initialize Configuration (WEB UI)
+## ▶️启动 UI 并初始化配置（WEB UI）
 
-1. **Start the WEB UI Server**
+1. **启动 WEB UI Server**
 
    ```bash
    ./merlin-box.sh server
    ```
 
-2. **Access the WEB UI**
+2. **访问 WEB UI**
 
-   Open the following address in your browser:
+   在浏览器中打开：
 
-   `http://ROUTER_IP:8080`
+   `http://路由器IP:8080`
 
-3. **Log in to the WEB UI**
+3. **登录 WEB UI**
 
-   Use the default credentials:
+   使用默认账号登录：
 
-  * Username: `admin`
-  * Password: `merlinbox`
+    * 用户名：`admin`
+    * 密码：`merlinbox`
 
-4. **Configure Proxy Nodes**
+4. **配置代理节点**
 
-   Go to **Node Management**, add your proxy nodes, and set the node you want to use as the **default node**.
+   进入【节点管理】，添加代理节点，并将需要使用的节点设置为 **默认节点**。
 
-5. **Configure Other Settings**
+5. **修改其它配置**
 
-   Adjust the following settings according to your needs:
+   根据实际需求调整相关配置，例如：
 
-  * DNS upstream servers
-  * IP whitelist / blacklist
-  * Domain blacklist
-  * Other routing and proxy settings
+    * DNS 上游
+    * IP 白名单 / 黑名单
+    * 域名黑名单
+    * 其它路由与代理相关配置
 
-6. **Start the Proxy**
+6. **启动代理**
 
-   Once the configuration is complete, start the proxy service.
-
+   完成配置后，启动代理服务即可。
 
 ---
 
-## 🔧 Modify Configuration (Script Mode Manual)
+## 🔧 修改配置（脚本模式纯手动）
 
-### 1. Modify `conf/config.json` (sing-box configuration)
+### 1. 修改 `conf/config.json`（sing-box 配置）
 
-- Configure outbounds based on your node information
-- Confirm that the sing-box outbound `routing_mark` matches the script variable (default `169`)
+- 按你的节点信息配置 outbounds
+- 确认 sing-box outbound `routing_mark` 与脚本变量一致（默认 `169`）
 
-### 2. Modify `conf/smartdns.conf`
+### 2. 修改 `conf/smartdns.conf`
 
-- Replace China/International DNS upstream as needed
-- Maintain domain routing rules (`chn-site.txt`)
+- 按需替换中国/国际 DNS 上游
+- 保持域名分流规则（`chn-site.txt`）
 
-### 3. If you need additional direct connection IPs, you can create and maintain (optional):
+### 3. 如需额外直连 IP，可创建并维护 (可选)：
 
 - `res/ip4-whitelist.txt`
 - `res/ip6-whitelist.txt`
 
-### 4. If you need to force proxy for specific IPs, you can create and maintain (optional):
+### 4. 如需强制代理 IP，可创建并维护 (可选)：
 
 - `res/ip4-blacklist.txt`
 - `res/ip6-blacklist.txt`
 
-### 5. Ad blocking/domain blocking (blackhole)
+### 5. 广告拦击/屏蔽域名 (黑洞)
 
 - `res/site-blocklist.txt`
 
-### 6. Force proxy domain (blacklist)
+### 6. 强制走代理域名 (黑名单)
 
-- `res/site-blacklist.txt` This project includes Apple-related domains in this file, which helps solve many problems accessing foreign Apple services. Friends accessing China region should modify this file themselves.
+- `res/site-blacklist.txt` 本项目此文件中收集了 Apple 相关域名，能解决访问外区苹果服务的很多问题，访问国区的小伙伴自行修改此文件。
 
-### 7. Device blacklist and whitelist (optional)
+### 7. 设备黑白名单 (可选)
 
-- `res/device_blacklist.txt`: Worried about neighbors leeching and accidentally entering the Lost Forest🌳? Configure neighbors' device MAC addresses in this file.
-- `res/device_whitelist.txt`: Using a whitelist can prevent unauthorized guests from accidentally entering the Lost Forest🌳. Configure common device MAC addresses in this file.
-- ⚠️ If you don't need this feature, please delete the corresponding file; otherwise, the file may exist but have no configured devices, causing devices to fail to connect to the internet.
+- `res/device_blacklist.txt`：怕邻居蹭网误入迷失深林🌳，在此文件中配置邻居设备的 MAC 地址即可。
+- `res/device_whitelist.txt`：使用白名单可以防止未授权的来宾用户误入迷失深林🌳，在此文件中配置常用设备 MAC 地址即可。
+- ⚠️如果不需要此功能，请删除对应的文件，否则有可能因为文件存在，但没有配设备，导致设备无法上网。
 
 ---
 
-## ▶️ Start/Stop Commands
+## ▶️ 启停命令
 
-Main entry command:
+主入口命令：
 
 ```bash
-./merlin-box.sh start                      #Start service (defaults: 1 1 0 0 1)
-./merlin-box.sh start 1 1 0 0 1            #Start with explicit params: IPv6 QUIC-block UDP oneself-proxy TcpFastOpen
-./merlin-box.sh stop                       #Stop service
-./merlin-box.sh restart                    #Restart service
-./merlin-box.sh restart 1 1 0 0 1          #Restart with explicit params: IPv6 QUIC-block UDP oneself-proxy TcpFastOpen
-./merlin-box.sh server                     #Start WEB UI server, default port is 8080, can specify port on startup: ./merlin-box.sh server 8081. Supports subcommands start/stop/restart, default is start. ./merlin-box.sh server start 8081
-./merlin-box.sh -h                         #Show help information
-./merlin-box.sh -v                         #Show version information
+./merlin-box.sh start                      #启动服务（默认参数: 1 1 0 0 1）
+./merlin-box.sh start 1 1 0 0 1            #显式参数启动：IPv6 QUIC拦截 UDP 自身代理 TcpFastOpen
+./merlin-box.sh stop                       #停止服务
+./merlin-box.sh restart                    #重启服务
+./merlin-box.sh restart 1 1 0 0 1          #显式参数重启：IPv6 QUIC拦截 UDP 自身代理 TcpFastOpen
+./merlin-box.sh server                     #启动 WEB UI server，默认端口为 8080，可以启动时指定端口号：./merlin-box.sh server 8081 。支持子命令 start/stop/restart，默认为 start。./merlin-box.sh server start 8081
+./merlin-box.sh -h                         #显示帮助信息
+./merlin-box.sh -v                         #显示版本信息
 ```
 
-- ▶️ `start`: Clean old rules -> Start sing-box -> Start smartdns -> Restart dnsmasq
-- `start` parameters (all optional, each value is `0` or `1`, default is `1 1 0 0 1`):
-  - `enable_ipv6` `disable_quic_from_lan` `enable_udp` `enable_oneself_proxy` `enable_tcp_fast_open`
-- ⏹️ `stop`: Stop sing-box/smartdns -> Clean iptables/ip6tables/ip rule/ipset -> Restart dnsmasq
+- ▶️`start`：清理旧规则 -> 启动 sing-box -> 启动 smartdns -> 重启 dnsmasq
+- `start` 参数（均可选，每个参数值为 `0` 或 `1`，默认值 `1 1 0 0 1`）：
+    - `enable_ipv6` `disable_quic_from_lan` `enable_udp` `enable_oneself_proxy` `enable_tcp_fast_open`
+- ⏹️ `stop`：停止 sing-box/smartdns -> 清理 iptables/ip6tables/ip rule/ipset -> 重启 dnsmasq
 
-Installation and uninstallation (boot startup):
+安装与卸载（开机启动）：
 
 ```bash
-./merlin-box.sh install                     #Install service to enable boot startup (after successful connection)
-./merlin-box.sh uninstall                   #Uninstall service to disable boot startup
+./merlin-box.sh install                     #安装服务使其开机启动（拨号成功后）
+./merlin-box.sh uninstall                   #卸载服务禁用开机启动
 ```
 
-Tool commands:
+工具命令：
 
 ```bash
-./merlin-box.sh tool compress_singbox       #Compress sing-box executable ¹
-./merlin-box.sh tool compress_smartdns      #Compress smartdns executable ¹
-./merlin-box.sh tool compress_merlinbox     #Compress merlin-box executable ¹
-./merlin-box.sh tool show_devices           #Show current DHCP lease device list  
-./merlin-box.sh tool update_rules           #Update rule files ²
-./merlin-box.sh tool build_singbox          #Build sing-box executable ¹
-./merlin-box.sh tool download_smartdns      #Download smartdns executable ¹
-./merlin-box.sh tool sub2nodes              #Convert subscription to node list 
-./merlin-box.sh tool sub2box                #Convert subscription to sing-box configuration ³
-./merlin-box.sh tool build_ui               #Build WEB UI front-end and resources
-./merlin-box.sh tool build_merlinbox        #Build merlin-box server
-./merlin-box.sh tool package                #Build final package
+./merlin-box.sh tool compress_singbox       #压缩 sing-box 可执行文件 ¹
+./merlin-box.sh tool compress_smartdns      #压缩 smartdns 可执行文件 ¹
+./merlin-box.sh tool compress_merlinbox     #压缩 merlin-box 可执行文件 ¹
+./merlin-box.sh tool show_devices           #显示当前 DHCP 租约的设备列表 
+./merlin-box.sh tool update_rules           #更新规则文件 ²
+./merlin-box.sh tool build_singbox          #构建 sing-box 可执行文件 ¹
+./merlin-box.sh tool download_smartdns      #下载 smartdns 可执行文件 ¹
+./merlin-box.sh tool sub2nodes              #将订阅转换为节点列表
+./merlin-box.sh tool sub2box                #将订阅转换为 sing-box 配置 ³
+./merlin-box.sh tool build_ui               #构建 WEB UI 及 相关资源
+./merlin-box.sh tool build_merlinbox        #构建 merlin-box 服务端
+./merlin-box.sh tool package                #打包最终文件
 ./merlin-box.sh tool -h
 ```
 
-1. Commands are only executed on the local system (or WSL), not on the router. Compression depends on the upx tool.
-- The binary files included in this repository have been compressed.
-- ⚠️ While compression can significantly reduce file size, startup will be slower than the original program.
+1. 命令仅在本地系统（或WSL）中执行，不能在路由器上执行。压缩依赖 upx 工具。
 
-2. Rule updates have two behaviors:
-- In development mode, a Python script is called to download the latest rule files from three sources and overwrite the local files.
-- In production mode (on the router), wget is used to download the latest rule files from the raw files of this repository and overwrite the local files.
+- 本仓库携带的二进制文件已经经过压缩。
+- ⚠️压缩虽然可以明显降低文件大小，但是启动时会比原始程序要慢。
 
-3. Subscription conversion has two behaviors:
-- In development mode, a Python script is called to convert the subscription to sing-box configuration.
-- In production mode (on the router), the merlin-box (under development) binary file is called for conversion.
+2. 规则更新有两种行为：
 
----
+- 在开发模式下，会调用python脚本从三个源下载最新规则文件并覆盖本地文件。
+- 在生产模式下（路由器中），使用wget从本仓库的 raw 文件下载最新规则文件并覆盖本地文件。
 
-# 📡 Protocol Support
+3. 订阅转换有两种行为：
 
-In theory, any protocol supported by sing-box can be integrated into this solution as long as it is correctly configured in `conf/config.json`.
+- 在开发模式下，会调用python脚本将订阅转换为 sing-box 配置。
+- 在生产模式下（路由器中），调用 merlin-box（开发中） 二进制文件进行转换。
 
 ---
 
-# 🙏 Reference Projects
+# 📡 协议支持
+
+理论上 sing-box 支持的协议，只要在 `conf/config.json` 正确配置，均可接入本方案。
+
+---
+
+# 🙏 参考项目
 
 - ASUSWRT-Merlin  
   https://github.com/RMerl/asuswrt-merlin.ng  
@@ -509,6 +513,7 @@ In theory, any protocol supported by sing-box can be integrated into this soluti
 
 # 📜 LICENSE
 
-This project is licensed under the **GNU General Public License v3.0** - see the [LICENSE](LICENSE) file for details.
+本项目基于 **GNU General Public License v3.0 (GPL-3.0)** 协议开源 - 详情请参阅 [LICENSE](LICENSE) 文件。
 
 Copyright (C) 2026 [LandDuck](https://github.com/LandDuck/).
+
