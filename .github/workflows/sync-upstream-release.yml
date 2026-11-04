@@ -87,6 +87,15 @@ jobs:
             git push
           fi
 
+      - name: Read mod patch version
+        id: mod-version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(tr -d '\r\n' < mod/patch-version.txt)"
+          [[ "$version" =~ ^[1-9][0-9]*$ ]]
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - name: Prepare isolated build workspace
         if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
         run: |
@@ -193,8 +202,8 @@ jobs:
         if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.upstream.outputs.tag }}.1
-          name: ${{ steps.upstream.outputs.tag }}.1 (klcb mod)
+          tag_name: ${{ steps.upstream.outputs.tag }}.${{ steps.mod-version.outputs.version }}
+          name: ${{ steps.upstream.outputs.tag }}.${{ steps.mod-version.outputs.version }} (klcb mod)
           target_commitish: main
           generate_release_notes: true
           fail_on_unmatched_files: true
