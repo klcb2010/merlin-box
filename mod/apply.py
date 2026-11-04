@@ -595,6 +595,35 @@ func parseClashYAML(content string) ([]map[string]any, bool) {
     if "clashOutbounds, isClashYAML := parseClashYAML(content)" not in go:
         replace_once(go_path, go_marker, go_insert + go_marker)
 
+    db_path = "ui/server/model/db/node.go"
+    db_file = ROOT / db_path
+    db_source = db_file.read_text(encoding="utf-8")
+    if "type TLSUTLSConfig struct" not in db_source:
+        tick = chr(96)
+        old_tls = (
+            "type TLSConfig struct {\n"
+            "\t// Enabled 是否启用 TLS，true 启用，false 禁用\n"
+            "\tEnabled bool " + tick + 'json:"enabled"' + tick + "\n"
+            "\t// ServerName TLS 服务器名称\n"
+            "\tServerName string " + tick + 'json:"server_name"' + tick + "\n"
+            "}"
+        )
+        new_tls = (
+            "type TLSUTLSConfig struct {\n"
+            "\tEnabled bool " + tick + 'json:"enabled"' + tick + "\n"
+            "\tFingerprint string " + tick + 'json:"fingerprint"' + tick + "\n"
+            "}\n\n"
+            "type TLSConfig struct {\n"
+            "\t// Enabled 是否启用 TLS，true 启用，false 禁用\n"
+            "\tEnabled bool " + tick + 'json:"enabled"' + tick + "\n"
+            "\t// ServerName TLS 服务器名称\n"
+            "\tServerName string " + tick + 'json:"server_name"' + tick + "\n"
+            "\tInsecure bool " + tick + 'json:"insecure,omitempty"' + tick + "\n"
+            "\tUtls *TLSUTLSConfig " + tick + 'json:"utls,omitempty"' + tick + "\n"
+            "}"
+        )
+        replace_once(db_path, old_tls, new_tls)
+
     mod_path = "ui/server/go.mod"
     mod = (ROOT / mod_path).read_text(encoding="utf-8")
     if "gopkg.in/yaml.v3" not in mod:
