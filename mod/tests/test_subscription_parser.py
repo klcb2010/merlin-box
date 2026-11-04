@@ -44,3 +44,18 @@ def test_anytls_uri_converts_to_singbox_outbound():
         "enabled": True,
         "server_name": "edge.example",
     }
+
+
+
+def test_anytls_uri_defaults_port_and_sni():
+    sub2box.is_local_ip = lambda _host: False
+    outbound = sub2box.parse_uri("anytls://secret@example.invalid#Default")
+    assert outbound["type"] == "anytls"
+    assert outbound["server_port"] == 443
+    assert outbound["password"] == "secret"
+    assert outbound["tls"]["server_name"] == "example.invalid"
+
+
+def test_anytls_uri_rejects_missing_password():
+    sub2box.is_local_ip = lambda _host: False
+    assert sub2box.parse_uri("anytls://@example.invalid:443#Broken") is None

@@ -329,6 +329,7 @@ def patch_node_list() -> None:
     state_new = '''        this.state = {
             nodeList: [],
             keyword: "",
+            excludeKeyword: "",
             typeFilter: "all",
             sortBy: "default"
         };
@@ -340,8 +341,12 @@ def patch_node_list() -> None:
 '''
     render_new = '''    render() {
         const components = [];
-        const {nodeList, keyword, typeFilter, sortBy} = this.state;
+        const {nodeList, keyword, excludeKeyword, typeFilter, sortBy} = this.state;
         const query = keyword.trim().toLowerCase();
+        const excludedTerms = excludeKeyword
+            .split(/[,，;；\\s]+/)
+            .map(value => value.trim().toLowerCase())
+            .filter(Boolean);
         const types = Array.from(new Set(nodeList.map(node => node.type).filter(Boolean))).sort();
         const typeOptions = [
             {value: "all", label: "全部协议"},
@@ -358,26 +363,27 @@ def patch_node_list() -> None:
             const matchesType = typeFilter === "all" || node.type === typeFilter;
             const searchable = [node.name, node.server, node.type]
                 .filter(Boolean).join(" ").toLowerCase();
-            return matchesType && (!query || searchable.includes(query));
+            const matchesSearch = !query || searchable.includes(query);
+            const matchesExclude = !excludedTerms.some(term => searchable.includes(term));
+            return matchesType && matchesSearch && matchesExclude;
         });
-        if (sortBy !== "default") {
-            visibleNodes.sort((a, b) => {
-                if (!!a.is_default !== !!b.is_default) {
-                    return a.is_default ? -1 : 1;
-                }
-                const left = String(
-                    sortBy === "server" ? a.server :
-                    sortBy === "type" ? a.type : a.name
-                ).toLowerCase();
-                const right = String(
-                    sortBy === "server" ? b.server :
-                    sortBy === "type" ? b.type : b.name
-                ).toLowerCase();
-                return sortBy === "name_desc"
-                    ? right.localeCompare(left)
-                    : left.localeCompare(right);
-            });
-        }
+        visibleNodes.sort((a, b) => {
+            if (!!a.is_default !== !!b.is_default) {
+                return a.is_default ? -1 : 1;
+            }
+            if (sortBy === "default") return 0;
+            const left = String(
+                sortBy === "server" ? a.server :
+                sortBy === "type" ? a.type : a.name
+            ).toLowerCase();
+            const right = String(
+                sortBy === "server" ? b.server :
+                sortBy === "type" ? b.type : b.name
+            ).toLowerCase();
+            return sortBy === "name_desc"
+                ? right.localeCompare(left)
+                : left.localeCompare(right);
+        });
 '''
     replace_once(path, render_anchor, render_new)
 
@@ -391,6 +397,13 @@ def patch_node_list() -> None:
                     value={keyword}
                     onChange={(event) => this.setState({keyword: event.target.value})}
                     style={{flex: "1 1 220px", minWidth: 180, height: 32, padding: "4px 11px", border: "1px solid #d9d9d9", borderRadius: 6, outline: "none", background: "transparent", color: "inherit"}}
+                />
+                <input
+                    type="text"
+                    placeholder="排除关键词（逗号或空格分隔）"
+                    value={excludeKeyword}
+                    onChange={(event) => this.setState({excludeKeyword: event.target.value})}
+                    style={{flex: "1 1 180px", minWidth: 150, height: 32, padding: "4px 11px", border: "1px solid #d9d9d9", borderRadius: 6, outline: "none", background: "transparent", color: "inherit"}}
                 />
                 <antd.Select
                     value={typeFilter}
