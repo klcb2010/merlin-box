@@ -159,8 +159,8 @@ jobs:
         if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.upstream.outputs.tag }}-klcb.1
-          name: ${{ steps.upstream.outputs.tag }} klcb.1
+          tag_name: ${{ steps.upstream.outputs.tag }}
+          name: ${{ steps.upstream.outputs.tag }}
           target_commitish: main
           generate_release_notes: true
           fail_on_unmatched_files: true
