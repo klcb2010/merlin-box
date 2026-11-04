@@ -463,14 +463,16 @@ def patch_mod_version() -> None:
 
 
 def patch_clash_yaml_support() -> None:
+    """Add Clash YAML parsing for AnyTLS subscriptions to both converters."""
     py_path = "tools/sub2box/main.py"
     py_file = ROOT / py_path
     py = py_file.read_text(encoding="utf-8")
     if "import yaml\n" not in py:
         replace_once(py_path, "import requests\n", "import requests\nimport yaml\n")
     py = py_file.read_text(encoding="utf-8")
-    helper = '''def parse_clash_yaml(content: str) -> List[Dict[str, Any]] | None:
-    """解析 Clash YAML proxies，提取 AnyTLS 节点。"""
+
+    py_helper = """def parse_clash_yaml(content: str) -> List[Dict[str, Any]] | None:
+    \\"\\"\\"解析 Clash YAML proxies，提取 AnyTLS 节点。\\"\\"\\"
     try:
         data = yaml.safe_load(content)
     except Exception:
@@ -503,58 +505,29 @@ def patch_clash_yaml_support() -> None:
     return outbounds
 
 
-'''
+"""
     if "def parse_clash_yaml(" not in py:
-        replace_once(py_path, "def build_singbox_config(", helper + "def build_singbox_config(")
-    branch = '''    # 判断格式
-    if is_base64(content) or re.match(r'^[A-Za-z0-9+/=]+    patch_python()
-    patch_go_fetch()
-    patch_go_parser()
-    patch_go_node_import()
-    patch_node_list()
-    patch_remote_version()
-    patch_mod_version()
-    patch_fork_updater()
-    print("mod injections applied")
+        replace_once(py_path, "def build_singbox_config(", py_helper + "def build_singbox_config(")
 
-
-if __name__ == "__main__":
-    main()
-, content.replace("\\n", "")):
-'''
-    branch_new = '''    # 优先识别 Clash YAML，避免逐行把配置项当成 URI。
-    clash_outbounds = parse_clash_yaml(content)
-    if clash_outbounds is not None:
-        outbounds.extend(clash_outbounds)
-    elif is_base64(content) or re.match(r'^[A-Za-z0-9+/=]+    patch_python()
-    patch_go_fetch()
-    patch_go_parser()
-    patch_go_node_import()
-    patch_node_list()
-    patch_remote_version()
-    patch_mod_version()
-    patch_fork_updater()
-    print("mod injections applied")
-
-
-if __name__ == "__main__":
-    main()
-, content.replace("\\n", "")):
-'''
+    py_marker = "    # 判断格式\n"
+    py_insert = (
+        "    # 优先识别 Clash YAML；识别后清空 content，避免再逐行误解析配置项。\n"
+        "    clash_outbounds = parse_clash_yaml(content)\n"
+        "    if clash_outbounds is not None:\n"
+        "        outbounds.extend(clash_outbounds)\n"
+        "        content = \"\"\n"
+    )
     py = py_file.read_text(encoding="utf-8")
     if "clash_outbounds = parse_clash_yaml(content)" not in py:
-        replace_once(py_path, branch, branch_new)
+        replace_once(py_path, py_marker, py_insert + py_marker)
 
     go_path = "ui/server/tools/sub2box.go"
     go_file = ROOT / go_path
     go = go_file.read_text(encoding="utf-8")
     if '"gopkg.in/yaml.v3"' not in go:
-        replace_once(go_path, '''	"time"
-)''', '''	"time"
+        replace_once(go_path, '\t"time"\n)', '\t"time"\n\n\t"gopkg.in/yaml.v3"\n)')
 
-	"gopkg.in/yaml.v3"
-)''')
-    go_helper = '''// parseClashYAML 从 Clash YAML 的 proxies 中提取 AnyTLS outbound。
+    go_helper = """// parseClashYAML 从 Clash YAML 的 proxies 中提取 AnyTLS outbound。
 func parseClashYAML(content string) ([]map[string]any, bool) {
 	var document map[string]any
 	if err := yaml.Unmarshal([]byte(content), &document); err != nil {
@@ -606,35 +579,26 @@ func parseClashYAML(content string) ([]map[string]any, bool) {
 	return outbounds, true
 }
 
-'''
+"""
     if "func parseClashYAML(" not in go:
         replace_once(go_path, "// convert 执行完整转换流程：拉取订阅、识别格式、解析节点并生成配置。", go_helper + "// convert 执行完整转换流程：拉取订阅、识别格式、解析节点并生成配置。")
+
+    go_marker = "\tnormalized := strings.ReplaceAll(content, \"\\n\", \"\")\n"
+    go_insert = (
+        "\tclashOutbounds, isClashYAML := parseClashYAML(content)\n"
+        "\tif isClashYAML {\n"
+        "\t\toutbounds = append(outbounds, clashOutbounds...)\n"
+        "\t\tcontent = \"\"\n"
+        "\t}\n"
+    )
     go = go_file.read_text(encoding="utf-8")
-    old = '''	normalized := strings.ReplaceAll(content, "\\n", "")
-	base64Like, _ := regexp.MatchString("^[A-Za-z0-9+/=]+$", normalized)
-	if isBase64(content) || base64Like {
-'''
-    new = '''	clashOutbounds, isClashYAML := parseClashYAML(content)
-	if isClashYAML {
-		outbounds = append(outbounds, clashOutbounds...)
-	} else {
-		normalized := strings.ReplaceAll(content, "\\n", "")
-		base64Like, _ := regexp.MatchString("^[A-Za-z0-9+/=]+$", normalized)
-		if isBase64(content) || base64Like {
-'''
     if "clashOutbounds, isClashYAML := parseClashYAML(content)" not in go:
-        replace_once(go_path, old, new)
-        replace_once(go_path, '''	logger.Success(fmt.Sprintf("成功转换 %d 个节点", len(outbounds)))
-''', '''	}
-	logger.Success(fmt.Sprintf("成功转换 %d 个节点", len(outbounds)))
-''')
+        replace_once(go_path, go_marker, go_insert + go_marker)
+
     mod_path = "ui/server/go.mod"
     mod = (ROOT / mod_path).read_text(encoding="utf-8")
     if "gopkg.in/yaml.v3" not in mod:
-        replace_once(mod_path, '''require (
-	github.com/go-chi/chi/v5''', '''require (
-	gopkg.in/yaml.v3 v3.0.1
-	github.com/go-chi/chi/v5''')
+        replace_once(mod_path, "require (\n\tgithub.com/go-chi/chi/v5", "require (\n\tgopkg.in/yaml.v3 v3.0.1\n\tgithub.com/go-chi/chi/v5")
 
 
 def main() -> None:
