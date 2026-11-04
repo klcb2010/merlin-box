@@ -1,6 +1,12 @@
 name: Sync Upstream Release
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "mod/**"
+      - ".github/workflows/sync-upstream-release.yml"
   schedule:
     - cron: "17 */6 * * *"
   workflow_dispatch:
