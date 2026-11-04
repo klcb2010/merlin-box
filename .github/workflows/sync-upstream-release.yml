@@ -88,7 +88,7 @@ jobs:
           fi
 
       - name: Prepare isolated build workspace
-        if: steps.upstream.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/merlin-box-build"
@@ -99,7 +99,7 @@ jobs:
             ./ "$RUNNER_TEMP/merlin-box-build/"
 
       - name: Apply mod injections
-        if: steps.upstream.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
         working-directory: ${{ runner.temp }}/merlin-box-build
         run: |
           set -euo pipefail
@@ -107,26 +107,26 @@ jobs:
           python3 mod/apply.py
 
       - name: Set up Go
-        if: steps.upstream.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
         uses: actions/setup-go@v5
         with:
           go-version-file: ui/server/go.mod
           cache-dependency-path: ui/server/go.sum
 
       - name: Set up Python
-        if: steps.upstream.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
       - name: Install Python test dependencies
-        if: steps.upstream.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
         working-directory: ${{ runner.temp }}/merlin-box-build
         run: |
           python3 -m pip install -r tools/sub2box/requirements.txt pytest
 
       - name: Test and build router packages
-        if: steps.upstream.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
         working-directory: ${{ runner.temp }}/merlin-box-build
         timeout-minutes: 90
         shell: bash
@@ -146,7 +146,7 @@ jobs:
             -C "$RUNNER_TEMP" merlin-box-build
 
       - name: Publish fork release
-        if: steps.upstream.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.upstream.outputs.tag }}-klcb.1
