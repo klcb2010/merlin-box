@@ -1,0 +1,143 @@
+name: Sync Upstream Release
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: "即使上游没有新 Release，也构建当前分支"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream-release
+  cancel-in-progress: false
+
+jobs:
+  sync-build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check upstream stable Release
+        id: upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_json="$(curl -fsSL https://api.github.com/repos/LandDuck/merlin-box/releases/latest)"
+          tag="$(jq -r '.tag_name // empty' <<< "$release_json")"
+          draft="$(jq -r '.draft' <<< "$release_json")"
+          prerelease="$(jq -r '.prerelease' <<< "$release_json")"
+          test -n "$tag"
+          test "$draft" = "false"
+          test "$prerelease" = "false"
+          current="$(tr -d '\r\n' < mod/upstream-release.txt 2>/dev/null || true)"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if [[ "$tag" != "$current" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Sync only after a new upstream Release
+        if: steps.upstream.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag='${{ steps.upstream.outputs.tag }}'
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          curl -fsSL "https://github.com/LandDuck/merlin-box/archive/refs/tags/$tag.tar.gz" -o "$work/upstream.tar.gz"
+          mkdir "$work/upstream"
+          tar -xzf "$work/upstream.tar.gz" -C "$work/upstream" --strip-components=1
+          rsync -a --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='README.md' \
+            --exclude='README.zh-CN.md' \
+            --exclude='mod/' \
+            --exclude='dist/' \
+            "$work/upstream/" ./
+          printf '%s\n' "$tag" > mod/upstream-release.txt
+
+      - name: Commit upstream source snapshot
+        if: steps.upstream.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(sync): import upstream release ${{ steps.upstream.outputs.tag }}"
+            git push
+          fi
+
+      - name: Prepare isolated build workspace
+        if: steps.upstream.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/merlin-box-build"
+          rsync -a --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='dist/' \
+            ./ "$RUNNER_TEMP/merlin-box-build/"
+
+      - name: Apply mod injections
+        if: steps.upstream.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        working-directory: ${{ runner.temp }}/merlin-box-build
+        run: |
+          set -euo pipefail
+          python3 mod/apply.py
+
+      - name: Set up Go
+        if: steps.upstream.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ui/server/go.mod
+          cache-dependency-path: ui/server/go.sum
+
+      - name: Set up Python
+        if: steps.upstream.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Test and cross-build
+        if: steps.upstream.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        working-directory: ${{ runner.temp }}/merlin-box-build
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/sub2box/main.py mod/apply.py
+          cd ui/server
+          go test ./...
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o "$RUNNER_TEMP/merlin-box-arm64" .
+          GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -ldflags="-s -w" -o "$RUNNER_TEMP/merlin-box-arm" .
+          cd ../..
+          tar -czf "$RUNNER_TEMP/merlin-box-mod-source.tar.gz" \
+            --exclude='.git' --exclude='node_modules' --exclude='dist' \
+            -C "$RUNNER_TEMP" merlin-box-build
+
+      - name: Publish fork release
+        if: steps.upstream.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.upstream.outputs.tag }}-klcb.1
+          name: ${{ steps.upstream.outputs.tag }} klcb.1
+          target_commitish: main
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            ${{ runner.temp }}/merlin-box-arm64
+            ${{ runner.temp }}/merlin-box-arm
+            ${{ runner.temp }}/merlin-box-mod-source.tar.gz
