@@ -117,7 +117,7 @@ jobs:
         if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '22'
 
       - name: Install frontend build tools
         if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
