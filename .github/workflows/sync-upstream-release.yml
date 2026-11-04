@@ -121,7 +121,26 @@ jobs:
 
       - name: Install frontend build tools
         if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
-        run: npm install --global yarn@1.22.22 gulp-cli
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global yarn@1.22.22 gulp-cli
+          npm_global_bin="$(npm prefix --global)/bin"
+          echo "$npm_global_bin" >> "$GITHUB_PATH"
+          export PATH="$npm_global_bin:$PATH"
+          command -v node
+          command -v yarn
+          command -v gulp
+          node --version
+          yarn --version
+          gulp --version
+
+      - name: Install frontend dependencies early
+        if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        working-directory: ${{ runner.temp }}/merlin-box-build/ui/front
+        run: |
+          set -euo pipefail
+          yarn install
 
       - name: Set up Python
         if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
