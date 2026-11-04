@@ -499,6 +499,20 @@ def patch_disable_login() -> None:
     replace_once(main_js, old_init, new_init)
 
     auth_path = "ui/server/middleware/auth.go"
+    imports_old = """import (
+	"net/http"
+	"strings"
+
+	"github.com/LandDuck/merlin-box/global"
+	httpHelper "github.com/LandDuck/merlin-box/helper/http"
+)
+"""
+    imports_new = """import (
+	"net/http"
+)
+"""
+    replace_once(auth_path, imports_old, imports_new)
+
     auth_old = """func Auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/api/login" || r.URL.Path == "/api/init" {
