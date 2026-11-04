@@ -424,8 +424,8 @@ def patch_fork_updater() -> None:
     )
     replace_once(
         "sh/tool.sh",
-        'https://github.com/LandDuck/merlin-box/releases/download/v\${latest_version}/',
-        'https://github.com/klcb2010/merlin-box/releases/download/v\${latest_version}/',
+        'https://github.com/LandDuck/merlin-box/releases/download/v${latest_version}/',
+        'https://github.com/klcb2010/merlin-box/releases/download/v${latest_version}/',
     )
 
 
