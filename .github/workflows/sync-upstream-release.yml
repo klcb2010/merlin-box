@@ -135,22 +135,37 @@ jobs:
         run: |
           python3 -m pip install -r tools/sub2box/requirements.txt pytest
 
-      - name: Test and build router packages
+      - name: Test mod injections
         if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
         working-directory: ${{ runner.temp }}/merlin-box-build
-        timeout-minutes: 90
-        shell: bash
         run: |
           set -euo pipefail
           python3 -m py_compile tools/sub2box/main.py mod/apply.py
           python3 -m pytest -q mod/tests
           cd ui/server
           go test ./...
-          cd ../..
+
+      - name: Build ARM64 router package
+        if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        working-directory: ${{ runner.temp }}/merlin-box-build
+        timeout-minutes: 90
+        run: |
+          set -euo pipefail
           chmod +x ./merlin-box.sh
           ./merlin-box.sh tool package arm64
+
+      - name: Build ARM router package
+        if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        working-directory: ${{ runner.temp }}/merlin-box-build
+        timeout-minutes: 90
+        run: |
+          set -euo pipefail
           ./merlin-box.sh tool package arm
-          test -n "$(find dist -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+
+      - name: Archive patched source
+        if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        run: |
+          set -euo pipefail
           tar -czf "$RUNNER_TEMP/merlin-box-mod-source.tar.gz" \
             --exclude='.git' --exclude='node_modules' --exclude='dist' \
             -C "$RUNNER_TEMP" merlin-box-build
