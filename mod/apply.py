@@ -410,12 +410,31 @@ def patch_node_list() -> None:
 
 
 
+
+def patch_fork_updater() -> None:
+    replace_once(
+        "merlin-box.sh",
+        'get_github_latest_release "LandDuck/merlin-box"',
+        'get_github_latest_release "klcb2010/merlin-box"',
+    )
+    replace_once(
+        "sh/tool.sh",
+        'local latest_version=$(get_github_latest_release "LandDuck/merlin-box")',
+        'local latest_version=$(get_github_latest_release "klcb2010/merlin-box")',
+    )
+    replace_once(
+        "sh/tool.sh",
+        'https://github.com/LandDuck/merlin-box/releases/download/v\${latest_version}/',
+        'https://github.com/klcb2010/merlin-box/releases/download/v\${latest_version}/',
+    )
+
 def main() -> None:
     patch_python()
     patch_go_fetch()
     patch_go_parser()
     patch_go_node_import()
     patch_node_list()
+    patch_fork_updater()
     print("mod injections applied")
 
 
