@@ -118,6 +118,92 @@ def patch_python() -> None:
     file_path.write_text(source, encoding="utf-8")
 
 
+
+def patch_go_fetch() -> None:
+    path = "ui/server/tools/helper.go"
+    old = '''// fetchSubscription 拉取订阅链接内容并返回去除首尾空白后的文本。
+func fetchSubscription(rawURL string, timeout time.Duration) (string, error) {
+	headers := map[string]string{
+		"User-Agent": "clash.meta",
+	}
+	logger.Success("正在拉取订阅: " + rawURL)
+	req, err := http.NewRequest(http.MethodGet, rawURL, nil)
+	if err != nil {
+		return "", err
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	client := &http.Client{Timeout: timeout}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("HTTP 请求失败: %s", resp.Status)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(body)), nil
+}
+'''
+    new = '''// fetchSubscription 拉取订阅链接内容；不根据扩展名改写 URL，完整保留查询参数。
+func fetchSubscription(rawURL string, timeout time.Duration) (string, error) {
+	logger.Success("正在拉取订阅: " + rawURL)
+	userAgents := []string{
+		"clash.meta",
+		"v2rayNG/1.9.38",
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0.0.0 Safari/537.36",
+	}
+	client := &http.Client{Timeout: timeout}
+	var lastErr error
+	for _, userAgent := range userAgents {
+		req, err := http.NewRequest(http.MethodGet, rawURL, nil)
+		if err != nil {
+			return "", err
+		}
+		req.Header.Set("User-Agent", userAgent)
+		req.Header.Set("Accept", "*/*")
+		req.Header.Set("Cache-Control", "no-cache")
+		resp, err := client.Do(req)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if resp.StatusCode == http.StatusUnauthorized ||
+			resp.StatusCode == http.StatusForbidden ||
+			resp.StatusCode == http.StatusNotAcceptable ||
+			resp.StatusCode == http.StatusTooManyRequests ||
+			resp.StatusCode >= 500 {
+			lastErr = fmt.Errorf("HTTP 请求失败: %s (User-Agent: %s)", resp.Status, userAgent)
+			resp.Body.Close()
+			continue
+		}
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			status := resp.Status
+			resp.Body.Close()
+			return "", fmt.Errorf("HTTP 请求失败: %s", status)
+		}
+		body, readErr := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if readErr != nil {
+			lastErr = readErr
+			continue
+		}
+		return strings.TrimSpace(string(body)), nil
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("订阅请求失败")
+	}
+	return "", lastErr
+}
+'''
+    replace_once(path, old, new)
+
+
 def patch_go_parser() -> None:
     path = "ui/server/tools/sub2box.go"
     parse_anchor = '''// parseURI 按协议分发 URI 到对应解析函数。
@@ -228,6 +314,7 @@ func saveAnytlsNode(outbound map[string]any, category string) bool {
 
 def main() -> None:
     patch_python()
+    patch_go_fetch()
     patch_go_parser()
     patch_go_node_import()
     print("mod injections applied")
