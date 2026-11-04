@@ -98,6 +98,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 mod/apply.py
+          python3 mod/apply.py
 
       - name: Set up Go
         if: steps.upstream.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
@@ -112,6 +113,12 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Install Python test dependencies
+        if: steps.upstream.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        working-directory: ${{ runner.temp }}/merlin-box-build
+        run: |
+          python3 -m pip install -r tools/sub2box/requirements.txt pytest
+
       - name: Test and build router packages
         if: steps.upstream.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
         working-directory: ${{ runner.temp }}/merlin-box-build
@@ -120,6 +127,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m py_compile tools/sub2box/main.py mod/apply.py
+          python3 -m pytest -q mod/tests
           cd ui/server
           go test ./...
           cd ../..
