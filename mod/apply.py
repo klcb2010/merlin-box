@@ -322,11 +322,11 @@ def patch_remote_version() -> None:
 
 def patch_node_list() -> None:
     path = "ui/front/scripts-dev/pages/home/NodeList.js"
-    state_anchor = '''        this.state = {
+    state_anchor = """        this.state = {
             nodeList: []
         };
-'''
-    state_new = '''        let savedFilters = {};
+"""
+    state_new = """        let savedFilters = {};
         try {
             savedFilters = JSON.parse(localStorage.getItem("merlin-box-node-filters") || "{}") || {};
         } catch (error) {
@@ -339,10 +339,10 @@ def patch_node_list() -> None:
             typeFilter: savedFilters.typeFilter || "all",
             sortBy: savedFilters.sortBy || "default"
         };
-'''
+"""
     replace_once(path, state_anchor, state_new)
 
-    filter_methods = '''    #saveFilters() {
+    filter_methods = """    #saveFilters() {
         const {keyword, excludeKeyword, typeFilter, sortBy} = this.state;
         try {
             localStorage.setItem("merlin-box-node-filters", JSON.stringify({
@@ -359,14 +359,16 @@ def patch_node_list() -> None:
         this.setState(values, () => this.#saveFilters());
     }
 
-'''
-    if "#saveFilters()" not in source:
-        replace_once(path, "    /**\\n     * 加载节点列表", filter_methods + "    /**\\n     * 加载节点列表")
+"""
+    method_anchor = """    /**
+     * 加载节点列表
+"""
+    replace_once(path, method_anchor, filter_methods + method_anchor)
 
-    render_anchor = '''    render() {
+    render_anchor = """    render() {
         const components = [];
-'''
-    render_new = '''    render() {
+"""
+    render_new = """    render() {
         const components = [];
         const {nodeList, keyword, excludeKeyword, typeFilter, sortBy} = this.state;
         const query = keyword.trim().toLowerCase();
@@ -411,13 +413,13 @@ def patch_node_list() -> None:
                 ? right.localeCompare(left)
                 : left.localeCompare(right);
         });
-'''
+"""
     replace_once(path, render_anchor, render_new)
 
-    toolbar_anchor = '''            <div className="node-list">
+    toolbar_anchor = """            <div className="node-list">
                 {this.state.nodeList.map(node => this.#renderCard(node))}
-'''
-    toolbar_new = '''            <div className="node-filter-bar" style={{display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 14}}>
+"""
+    toolbar_new = """            <div className="node-filter-bar" style={{display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 14}}>
                 <input
                     type="text"
                     placeholder="搜索节点名称、服务器地址或协议"
@@ -432,68 +434,119 @@ def patch_node_list() -> None:
                     onChange={(event) => this.#updateFilters({excludeKeyword: event.target.value})}
                     style={{flex: "1 1 180px", minWidth: 150, height: 32, padding: "4px 11px", border: "1px solid #d9d9d9", borderRadius: 6, outline: "none", background: "transparent", color: "inherit"}}
                 />
-                <antd.Select
-                    value={typeFilter}
-                    onChange={(value) => this.#updateFilters({typeFilter: value})}
-                    options={typeOptions}
-                    style={{width: 130}}
-                />
-                <antd.Select
-                    value={sortBy}
-                    onChange={(value) => this.#updateFilters({sortBy: value})}
-                    options={sortOptions}
-                    style={{width: 130}}
-                />
+                <antd.Select value={typeFilter} onChange={(value) => this.#updateFilters({typeFilter: value})} options={typeOptions} style={{width: 130}} />
+                <antd.Select value={sortBy} onChange={(value) => this.#updateFilters({sortBy: value})} options={sortOptions} style={{width: 130}} />
                 <span style={{fontSize: 12, color: "#888", whiteSpace: "nowrap"}}>
                     显示 {visibleNodes.length} / {nodeList.length}
                 </span>
-                <button
-                    className="node-action primary"
-                    onClick={() => {
-                        this.#saveFilters();
-                        this.#loadNodeList();
-                        this.$helper.success("本地节点列表已刷新，过滤条件已保存。");
-                    }}
-                >刷新本地列表</button>
+                <button className="node-action primary" onClick={() => {
+                    this.#saveFilters();
+                    this.#loadNodeList();
+                    this.$helper.success("本地节点列表已刷新，过滤条件已保存。");
+                }}>刷新本地列表</button>
             </div>
             <div className="node-list">
                 {visibleNodes.length > 0
                     ? visibleNodes.map(node => this.#renderCard(node))
                     : <div style={{padding: 20, textAlign: "center", color: "#888"}}>没有符合条件的节点</div>}
-'''
+"""
     replace_once(path, toolbar_anchor, toolbar_new)
 
 
-
-
 def patch_subscription_filter_save() -> None:
-    """Save node filters before updating a subscription."""
+    """Save the current node filters before a subscription refresh."""
     path = "ui/front/scripts-dev/pages/home/SubscriptionList.js"
-    anchor = '''            onOk: () => {
+    anchor = """            onOk: () => {
                 this.#runAction(this.$config.apis.comm_updateSubscriptionNodes, guid, "正在更新订阅节点");
             }
-'''
-    replacement = '''            onOk: () => {
+"""
+    replacement = """            onOk: () => {
                 if (this.props.onBeforeUpdate) {
                     this.props.onBeforeUpdate();
                 }
                 this.#runAction(this.$config.apis.comm_updateSubscriptionNodes, guid, "正在更新订阅节点");
             }
-'''
-    source = (ROOT / path).read_text(encoding="utf-8")
-    if "this.props.onBeforeUpdate()" not in source:
-        replace_once(path, anchor, replacement)
+"""
+    replace_once(path, anchor, replacement)
 
     node_path = "ui/front/scripts-dev/pages/home/NodeList.js"
-    old_prop = '''<SubscriptionList key="subscription-list" onUpdate={() => this.#loadNodeList()} />'''
-    new_prop = '''<SubscriptionList
+    old_prop = """        components.push(<SubscriptionList key="subscription-list" onUpdate={() => this.#loadNodeList()} />);
+"""
+    new_prop = """        components.push(<SubscriptionList
             key="subscription-list"
             onBeforeUpdate={() => this.#saveFilters()}
             onUpdate={() => this.#loadNodeList()}
-        />'''
-    node_source = (ROOT / node_path).read_text(encoding="utf-8")
-    if "onBeforeUpdate={() => this.#saveFilters()}" not in node_source:
-        replace_once(node_path, old_prop, new_prop)
+        />);
+"""
+    replace_once(node_path, old_prop, new_prop)
+
+
+def patch_disable_login() -> None:
+    """Remove the login gate from the LAN-only management UI."""
+    main_js = "ui/front/scripts-dev/main.js"
+    old_init = """            if (data === 1) {
+                loadPage(helper, "main");
+                //已经登录
+                window.loggedIn = true;
+                return
+            }
+            loadPage(helper, "index");
+"""
+    new_init = """            // mod: open management UI without the login panel
+            window.loggedIn = true;
+            loadPage(helper, "main");
+"""
+    replace_once(main_js, old_init, new_init)
+
+    auth_path = "ui/server/middleware/auth.go"
+    auth_old = """func Auth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/api/login" || r.URL.Path == "/api/init" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		token := strings.TrimSpace(r.Header.Get("Authorization"))
+		if strings.HasPrefix(token, "Bearer ") {
+			token = strings.TrimSpace(strings.TrimPrefix(token, "Bearer "))
+		}
+		// WebSocket 握手时浏览器无法设置自定义 Header，从 query param 中读取
+		if token == "" {
+			token = strings.TrimSpace(r.URL.Query().Get("token"))
+		}
+
+		if !global.ValidateAndRefreshAuthToken(token) {
+			//w.WriteHeader(http.StatusUnauthorized)
+			httpHelper.ResponseRequireLogin(w)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+"""
+    auth_new = """func Auth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r)
+	})
+}
+"""
+    replace_once(auth_path, auth_old, auth_new)
+
+    main_page = "ui/front/scripts-dev/pages/home/Main.js"
+    main_source = (ROOT / main_page).read_text(encoding="utf-8")
+    controls = """                <a href="javascript:void(0);" className={"logout-btn change-pwd-btn"} onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.#changePassword();
+                }}>修改密码</a>
+                <a href="javascript:void(0);" className={"logout-btn"} onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.#logout();
+                }}>退出登录</a>
+"""
+    replace_once(main_page, controls, "")
 
 
 def patch_fork_updater() -> None:
@@ -706,6 +759,7 @@ def main() -> None:
     patch_go_node_import()
     patch_node_list()
     patch_subscription_filter_save()
+    patch_disable_login()
     patch_remote_version()
     patch_mod_version()
     patch_fork_updater()
