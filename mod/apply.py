@@ -326,15 +326,42 @@ def patch_node_list() -> None:
             nodeList: []
         };
 '''
-    state_new = '''        this.state = {
+    state_new = '''        let savedFilters = {};
+        try {
+            savedFilters = JSON.parse(localStorage.getItem("merlin-box-node-filters") || "{}") || {};
+        } catch (error) {
+            savedFilters = {};
+        }
+        this.state = {
             nodeList: [],
-            keyword: "",
-            excludeKeyword: "",
-            typeFilter: "all",
-            sortBy: "default"
+            keyword: savedFilters.keyword || "",
+            excludeKeyword: savedFilters.excludeKeyword || "",
+            typeFilter: savedFilters.typeFilter || "all",
+            sortBy: savedFilters.sortBy || "default"
         };
 '''
     replace_once(path, state_anchor, state_new)
+
+    filter_methods = '''    #saveFilters() {
+        const {keyword, excludeKeyword, typeFilter, sortBy} = this.state;
+        try {
+            localStorage.setItem("merlin-box-node-filters", JSON.stringify({
+                keyword, excludeKeyword, typeFilter, sortBy
+            }));
+            return true;
+        } catch (error) {
+            this.$helper.warning("过滤条件保存失败，请检查浏览器存储空间。");
+            return false;
+        }
+    }
+
+    #updateFilters(values) {
+        this.setState(values, () => this.#saveFilters());
+    }
+
+'''
+    if "#saveFilters()" not in source:
+        replace_once(path, "    /**\\n     * 加载节点列表", filter_methods + "    /**\\n     * 加载节点列表")
 
     render_anchor = '''    render() {
         const components = [];
@@ -395,31 +422,39 @@ def patch_node_list() -> None:
                     type="text"
                     placeholder="搜索节点名称、服务器地址或协议"
                     value={keyword}
-                    onChange={(event) => this.setState({keyword: event.target.value})}
+                    onChange={(event) => this.#updateFilters({keyword: event.target.value})}
                     style={{flex: "1 1 220px", minWidth: 180, height: 32, padding: "4px 11px", border: "1px solid #d9d9d9", borderRadius: 6, outline: "none", background: "transparent", color: "inherit"}}
                 />
                 <input
                     type="text"
                     placeholder="排除关键词（逗号或空格分隔）"
                     value={excludeKeyword}
-                    onChange={(event) => this.setState({excludeKeyword: event.target.value})}
+                    onChange={(event) => this.#updateFilters({excludeKeyword: event.target.value})}
                     style={{flex: "1 1 180px", minWidth: 150, height: 32, padding: "4px 11px", border: "1px solid #d9d9d9", borderRadius: 6, outline: "none", background: "transparent", color: "inherit"}}
                 />
                 <antd.Select
                     value={typeFilter}
-                    onChange={(value) => this.setState({typeFilter: value})}
+                    onChange={(value) => this.#updateFilters({typeFilter: value})}
                     options={typeOptions}
                     style={{width: 130}}
                 />
                 <antd.Select
                     value={sortBy}
-                    onChange={(value) => this.setState({sortBy: value})}
+                    onChange={(value) => this.#updateFilters({sortBy: value})}
                     options={sortOptions}
                     style={{width: 130}}
                 />
                 <span style={{fontSize: 12, color: "#888", whiteSpace: "nowrap"}}>
                     显示 {visibleNodes.length} / {nodeList.length}
                 </span>
+                <button
+                    className="node-action primary"
+                    onClick={() => {
+                        this.#saveFilters();
+                        this.#loadNodeList();
+                        this.$helper.success("本地节点列表已刷新，过滤条件已保存。");
+                    }}
+                >刷新本地列表</button>
             </div>
             <div className="node-list">
                 {visibleNodes.length > 0
@@ -429,6 +464,36 @@ def patch_node_list() -> None:
     replace_once(path, toolbar_anchor, toolbar_new)
 
 
+
+
+def patch_subscription_filter_save() -> None:
+    """Save node filters before updating a subscription."""
+    path = "ui/front/scripts-dev/pages/home/SubscriptionList.js"
+    anchor = '''            onOk: () => {
+                this.#runAction(this.$config.apis.comm_updateSubscriptionNodes, guid, "正在更新订阅节点");
+            }
+'''
+    replacement = '''            onOk: () => {
+                if (this.props.onBeforeUpdate) {
+                    this.props.onBeforeUpdate();
+                }
+                this.#runAction(this.$config.apis.comm_updateSubscriptionNodes, guid, "正在更新订阅节点");
+            }
+'''
+    source = (ROOT / path).read_text(encoding="utf-8")
+    if "this.props.onBeforeUpdate()" not in source:
+        replace_once(path, anchor, replacement)
+
+    node_path = "ui/front/scripts-dev/pages/home/NodeList.js"
+    old_prop = '''<SubscriptionList key="subscription-list" onUpdate={() => this.#loadNodeList()} />'''
+    new_prop = '''<SubscriptionList
+            key="subscription-list"
+            onBeforeUpdate={() => this.#saveFilters()}
+            onUpdate={() => this.#loadNodeList()}
+        />'''
+    node_source = (ROOT / node_path).read_text(encoding="utf-8")
+    if "onBeforeUpdate={() => this.#saveFilters()}" not in node_source:
+        replace_once(node_path, old_prop, new_prop)
 
 
 def patch_fork_updater() -> None:
@@ -452,7 +517,10 @@ def patch_fork_updater() -> None:
 def patch_mod_version() -> None:
     upstream_tag = (ROOT / "mod" / "upstream-release.txt").read_text(encoding="utf-8").strip()
     upstream_version = upstream_tag[1:] if upstream_tag.startswith("v") else upstream_tag
-    mod_version = upstream_version + ".1"
+    patch_revision = (ROOT / "mod" / "patch-version.txt").read_text(encoding="utf-8").strip()
+    if not patch_revision.isdigit() or int(patch_revision) < 1:
+        raise RuntimeError("mod/patch-version.txt must contain a positive integer")
+    mod_version = upstream_version + "." + patch_revision
     path = ROOT / "merlin-box.sh"
     lines = path.read_text(encoding="utf-8").splitlines()
     indexes = [i for i, line in enumerate(lines) if line.startswith('SCRIPT_VERSION="')]
@@ -637,6 +705,7 @@ def main() -> None:
     patch_go_parser()
     patch_go_node_import()
     patch_node_list()
+    patch_subscription_filter_save()
     patch_remote_version()
     patch_mod_version()
     patch_fork_updater()
