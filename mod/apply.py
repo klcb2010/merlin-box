@@ -414,8 +414,8 @@ def patch_node_list() -> None:
 def patch_fork_updater() -> None:
     replace_once(
         "merlin-box.sh",
-        'VERSION=$(get_github_latest_release "LandDuck/merlin-box")',
-        'VERSION=$(get_github_latest_release "klcb2010/merlin-box")',
+        '      VERSION=$(get_github_latest_release "LandDuck/merlin-box")',
+        '      VERSION=$(get_github_latest_release "klcb2010/merlin-box")',
     )
     replace_once(
         "sh/tool.sh",
