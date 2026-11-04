@@ -112,18 +112,21 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Test and cross-build
+      - name: Test and build router packages
         if: steps.upstream.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
         working-directory: ${{ runner.temp }}/merlin-box-build
+        timeout-minutes: 90
         shell: bash
         run: |
           set -euo pipefail
           python3 -m py_compile tools/sub2box/main.py mod/apply.py
           cd ui/server
           go test ./...
-          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o "$RUNNER_TEMP/merlin-box-arm64" .
-          GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -ldflags="-s -w" -o "$RUNNER_TEMP/merlin-box-arm" .
           cd ../..
+          chmod +x ./merlin-box.sh
+          ./merlin-box.sh tool package arm64
+          ./merlin-box.sh tool package arm
+          test -n "$(find dist -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
           tar -czf "$RUNNER_TEMP/merlin-box-mod-source.tar.gz" \
             --exclude='.git' --exclude='node_modules' --exclude='dist' \
             -C "$RUNNER_TEMP" merlin-box-build
@@ -138,6 +141,5 @@ jobs:
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            ${{ runner.temp }}/merlin-box-arm64
-            ${{ runner.temp }}/merlin-box-arm
+            ${{ runner.temp }}/merlin-box-build/dist/*.tar.gz
             ${{ runner.temp }}/merlin-box-mod-source.tar.gz
