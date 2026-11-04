@@ -113,6 +113,18 @@ jobs:
           go-version-file: ui/server/go.mod
           cache-dependency-path: ui/server/go.sum
 
+      - name: Set up Node.js
+        if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: yarn
+          cache-dependency-path: ui/front/yarn.lock
+
+      - name: Install frontend build tools
+        if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
+        run: npm install --global yarn@1.22.22 gulp-cli
+
       - name: Set up Python
         if: steps.upstream.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_build)
         uses: actions/setup-python@v5
