@@ -59,3 +59,39 @@ def test_anytls_uri_defaults_port_and_sni():
 def test_anytls_uri_rejects_missing_password():
     sub2box.is_local_ip = lambda _host: False
     assert sub2box.parse_uri("anytls://@example.invalid:443#Broken") is None
+
+
+def test_clash_yaml_anytls_nodes_convert_with_tls_options():
+    sub2box.is_local_ip = lambda _host: False
+    content = """
+mixed-port: 7890
+allow-lan: true
+proxies:
+  - name: "Hong Kong 01"
+    type: anytls
+    server: node.example.invalid
+    port: "601"
+    password: "sample-secret"
+    udp: true
+    client-fingerprint: chrome
+    sni: edge.example.invalid
+    skip-cert-verify: true
+proxy-groups:
+  - name: SSRDOG
+    type: select
+    proxies: ["Hong Kong 01"]
+"""
+    outbounds = sub2box.parse_clash_yaml(content)
+    assert len(outbounds) == 1
+    outbound = outbounds[0]
+    assert outbound["type"] == "anytls"
+    assert outbound["tag"] == "Hong Kong 01"
+    assert outbound["server_port"] == 601
+    assert outbound["password"] == "sample-secret"
+    assert outbound["tls"]["server_name"] == "edge.example.invalid"
+    assert outbound["tls"]["insecure"] is True
+    assert outbound["tls"]["utls"]["fingerprint"] == "chrome"
+
+
+def test_clash_yaml_without_proxies_is_not_misidentified():
+    assert sub2box.parse_clash_yaml("mixed-port: 7890\nmode: rule\n") is None

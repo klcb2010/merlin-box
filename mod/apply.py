@@ -461,8 +461,185 @@ def patch_mod_version() -> None:
     lines[indexes[0]] = f'SCRIPT_VERSION="{mod_version}"'
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
+
+def patch_clash_yaml_support() -> None:
+    py_path = "tools/sub2box/main.py"
+    py_file = ROOT / py_path
+    py = py_file.read_text(encoding="utf-8")
+    if "import yaml\n" not in py:
+        replace_once(py_path, "import requests\n", "import requests\nimport yaml\n")
+    py = py_file.read_text(encoding="utf-8")
+    helper = '''def parse_clash_yaml(content: str) -> List[Dict[str, Any]] | None:
+    """解析 Clash YAML proxies，提取 AnyTLS 节点。"""
+    try:
+        data = yaml.safe_load(content)
+    except Exception:
+        return None
+    if not isinstance(data, dict) or not isinstance(data.get("proxies"), list):
+        return None
+    outbounds = []
+    for proxy in data["proxies"]:
+        if not isinstance(proxy, dict) or str(proxy.get("type", "")).lower() != "anytls":
+            continue
+        server = str(proxy.get("server", "")).strip()
+        password = str(proxy.get("password", ""))
+        try:
+            port = int(proxy.get("port", 443))
+        except (TypeError, ValueError):
+            continue
+        if not server or not password or not 1 <= port <= 65535 or is_local_ip(server):
+            continue
+        name = str(proxy.get("name") or f"anytls-{server}:{port}")
+        sni = str(proxy.get("sni") or server)
+        tls = {"enabled": True, "server_name": sni}
+        if proxy.get("skip-cert-verify") is True:
+            tls["insecure"] = True
+        fingerprint = proxy.get("client-fingerprint")
+        if fingerprint:
+            tls["utls"] = {"enabled": True, "fingerprint": str(fingerprint)}
+        outbounds.append({"type": "anytls", "tag": name, "server": server,
+                          "server_port": port, "password": password, "tls": tls})
+    print_success(f"从 Clash YAML 中识别到 {len(outbounds)} 个 AnyTLS 节点")
+    return outbounds
+
+
+'''
+    if "def parse_clash_yaml(" not in py:
+        replace_once(py_path, "def build_singbox_config(", helper + "def build_singbox_config(")
+    branch = '''    # 判断格式
+    if is_base64(content) or re.match(r'^[A-Za-z0-9+/=]+    patch_python()
+    patch_go_fetch()
+    patch_go_parser()
+    patch_go_node_import()
+    patch_node_list()
+    patch_remote_version()
+    patch_mod_version()
+    patch_fork_updater()
+    print("mod injections applied")
+
+
+if __name__ == "__main__":
+    main()
+, content.replace("\\n", "")):
+'''
+    branch_new = '''    # 优先识别 Clash YAML，避免逐行把配置项当成 URI。
+    clash_outbounds = parse_clash_yaml(content)
+    if clash_outbounds is not None:
+        outbounds.extend(clash_outbounds)
+    elif is_base64(content) or re.match(r'^[A-Za-z0-9+/=]+    patch_python()
+    patch_go_fetch()
+    patch_go_parser()
+    patch_go_node_import()
+    patch_node_list()
+    patch_remote_version()
+    patch_mod_version()
+    patch_fork_updater()
+    print("mod injections applied")
+
+
+if __name__ == "__main__":
+    main()
+, content.replace("\\n", "")):
+'''
+    py = py_file.read_text(encoding="utf-8")
+    if "clash_outbounds = parse_clash_yaml(content)" not in py:
+        replace_once(py_path, branch, branch_new)
+
+    go_path = "ui/server/tools/sub2box.go"
+    go_file = ROOT / go_path
+    go = go_file.read_text(encoding="utf-8")
+    if '"gopkg.in/yaml.v3"' not in go:
+        replace_once(go_path, '''	"time"
+)''', '''	"time"
+
+	"gopkg.in/yaml.v3"
+)''')
+    go_helper = '''// parseClashYAML 从 Clash YAML 的 proxies 中提取 AnyTLS outbound。
+func parseClashYAML(content string) ([]map[string]any, bool) {
+	var document map[string]any
+	if err := yaml.Unmarshal([]byte(content), &document); err != nil {
+		return nil, false
+	}
+	raw, exists := document["proxies"]
+	if !exists {
+		return nil, false
+	}
+	proxies, ok := raw.([]any)
+	if !ok {
+		return nil, false
+	}
+	outbounds := make([]map[string]any, 0, len(proxies))
+	for _, item := range proxies {
+		proxy, ok := item.(map[string]any)
+		if !ok || strings.ToLower(asString(proxy["type"])) != "anytls" {
+			continue
+		}
+		server, password := strings.TrimSpace(asString(proxy["server"])), asString(proxy["password"])
+		port, err := toInt(proxy["port"])
+		if err != nil || port == 0 {
+			port = 443
+		}
+		if server == "" || password == "" || port < 1 || port > 65535 || isLocalIP(server) {
+			continue
+		}
+		tag := asString(proxy["name"])
+		if tag == "" {
+			tag = fmt.Sprintf("anytls-%s:%d", server, port)
+		}
+		sni := asString(proxy["sni"])
+		if sni == "" {
+			sni = server
+		}
+		tls := map[string]any{"enabled": true, "server_name": sni}
+		if skip, ok := proxy["skip-cert-verify"].(bool); ok && skip {
+			tls["insecure"] = true
+		}
+		if fp := asString(proxy["client-fingerprint"]); fp != "" {
+			tls["utls"] = map[string]any{"enabled": true, "fingerprint": fp}
+		}
+		outbounds = append(outbounds, map[string]any{
+			"type": "anytls", "tag": tag, "server": server,
+			"server_port": port, "password": password, "tls": tls,
+		})
+	}
+	logger.Success(fmt.Sprintf("从 Clash YAML 中识别到 %d 个 AnyTLS 节点", len(outbounds)))
+	return outbounds, true
+}
+
+'''
+    if "func parseClashYAML(" not in go:
+        replace_once(go_path, "// convert 执行完整转换流程：拉取订阅、识别格式、解析节点并生成配置。", go_helper + "// convert 执行完整转换流程：拉取订阅、识别格式、解析节点并生成配置。")
+    go = go_file.read_text(encoding="utf-8")
+    old = '''	normalized := strings.ReplaceAll(content, "\\n", "")
+	base64Like, _ := regexp.MatchString("^[A-Za-z0-9+/=]+$", normalized)
+	if isBase64(content) || base64Like {
+'''
+    new = '''	clashOutbounds, isClashYAML := parseClashYAML(content)
+	if isClashYAML {
+		outbounds = append(outbounds, clashOutbounds...)
+	} else {
+		normalized := strings.ReplaceAll(content, "\\n", "")
+		base64Like, _ := regexp.MatchString("^[A-Za-z0-9+/=]+$", normalized)
+		if isBase64(content) || base64Like {
+'''
+    if "clashOutbounds, isClashYAML := parseClashYAML(content)" not in go:
+        replace_once(go_path, old, new)
+        replace_once(go_path, '''	logger.Success(fmt.Sprintf("成功转换 %d 个节点", len(outbounds)))
+''', '''	}
+	logger.Success(fmt.Sprintf("成功转换 %d 个节点", len(outbounds)))
+''')
+    mod_path = "ui/server/go.mod"
+    mod = (ROOT / mod_path).read_text(encoding="utf-8")
+    if "gopkg.in/yaml.v3" not in mod:
+        replace_once(mod_path, '''require (
+	github.com/go-chi/chi/v5''', '''require (
+	gopkg.in/yaml.v3 v3.0.1
+	github.com/go-chi/chi/v5''')
+
+
 def main() -> None:
     patch_python()
+    patch_clash_yaml_support()
     patch_go_fetch()
     patch_go_parser()
     patch_go_node_import()
