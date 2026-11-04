@@ -472,7 +472,7 @@ def patch_clash_yaml_support() -> None:
     py = py_file.read_text(encoding="utf-8")
 
     py_helper = """def parse_clash_yaml(content: str) -> List[Dict[str, Any]] | None:
-    \\"\\"\\"解析 Clash YAML proxies，提取 AnyTLS 节点。\\"\\"\\"
+    # 解析 Clash YAML proxies，提取 AnyTLS 节点。
     try:
         data = yaml.safe_load(content)
     except Exception:
