@@ -313,6 +313,13 @@ func saveAnytlsNode(outbound map[string]any, category string) bool {
 
 
 
+def patch_remote_version() -> None:
+    path = "ui/server/handlers/status.go"
+    old = 're := regexp.MustCompile(`\\b(\\d+\\.\\d+\\.\\d+)\\b`)'
+    new = 're := regexp.MustCompile(`\\b(\\d+\\.\\d+\\.\\d+(\\.\\d+)?)\\b`)'
+    replace_once(path, old, new)
+
+
 def patch_node_list() -> None:
     path = "ui/front/scripts-dev/pages/home/NodeList.js"
     state_anchor = '''        this.state = {
@@ -378,12 +385,12 @@ def patch_node_list() -> None:
                 {this.state.nodeList.map(node => this.#renderCard(node))}
 '''
     toolbar_new = '''            <div className="node-filter-bar" style={{display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 14}}>
-                <antd.Input
+                <input
+                    type="text"
                     placeholder="搜索节点名称、服务器地址或协议"
-                    allowClear
                     value={keyword}
                     onChange={(event) => this.setState({keyword: event.target.value})}
-                    style={{flex: "1 1 220px", minWidth: 180}}
+                    style={{flex: "1 1 220px", minWidth: 180, height: 32, padding: "4px 11px", border: "1px solid #d9d9d9", borderRadius: 6, outline: "none", background: "transparent", color: "inherit"}}
                 />
                 <antd.Select
                     value={typeFilter}
@@ -447,6 +454,7 @@ def main() -> None:
     patch_go_parser()
     patch_go_node_import()
     patch_node_list()
+    patch_remote_version()
     patch_mod_version()
     patch_fork_updater()
     print("mod injections applied")
