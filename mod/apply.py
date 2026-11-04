@@ -312,11 +312,110 @@ func saveAnytlsNode(outbound map[string]any, category string) bool {
     replace_once(path, switch_anchor, switch_new)
 
 
+
+def patch_node_list() -> None:
+    path = "ui/front/scripts-dev/pages/home/NodeList.js"
+    state_anchor = '''        this.state = {
+            nodeList: []
+        };
+'''
+    state_new = '''        this.state = {
+            nodeList: [],
+            keyword: "",
+            typeFilter: "all",
+            sortBy: "default"
+        };
+'''
+    replace_once(path, state_anchor, state_new)
+
+    render_anchor = '''    render() {
+        const components = [];
+'''
+    render_new = '''    render() {
+        const components = [];
+        const {nodeList, keyword, typeFilter, sortBy} = this.state;
+        const query = keyword.trim().toLowerCase();
+        const types = Array.from(new Set(nodeList.map(node => node.type).filter(Boolean))).sort();
+        const typeOptions = [
+            {value: "all", label: "全部协议"},
+            ...types.map(type => ({value: type, label: type.toUpperCase()}))
+        ];
+        const sortOptions = [
+            {value: "default", label: "默认顺序"},
+            {value: "name", label: "名称 A-Z"},
+            {value: "name_desc", label: "名称 Z-A"},
+            {value: "server", label: "服务器 A-Z"},
+            {value: "type", label: "协议类型"}
+        ];
+        const visibleNodes = nodeList.filter(node => {
+            const matchesType = typeFilter === "all" || node.type === typeFilter;
+            const searchable = [node.name, node.server, node.type]
+                .filter(Boolean).join(" ").toLowerCase();
+            return matchesType && (!query || searchable.includes(query));
+        });
+        if (sortBy !== "default") {
+            visibleNodes.sort((a, b) => {
+                if (!!a.is_default !== !!b.is_default) {
+                    return a.is_default ? -1 : 1;
+                }
+                const left = String(
+                    sortBy === "server" ? a.server :
+                    sortBy === "type" ? a.type : a.name
+                ).toLowerCase();
+                const right = String(
+                    sortBy === "server" ? b.server :
+                    sortBy === "type" ? b.type : b.name
+                ).toLowerCase();
+                return sortBy === "name_desc"
+                    ? right.localeCompare(left)
+                    : left.localeCompare(right);
+            });
+        }
+'''
+    replace_once(path, render_anchor, render_new)
+
+    toolbar_anchor = '''            <div className="node-list">
+                {this.state.nodeList.map(node => this.#renderCard(node))}
+'''
+    toolbar_new = '''            <div className="node-filter-bar" style={{display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 14}}>
+                <antd.Input
+                    placeholder="搜索节点名称、服务器地址或协议"
+                    allowClear
+                    value={keyword}
+                    onChange={(event) => this.setState({keyword: event.target.value})}
+                    style={{flex: "1 1 220px", minWidth: 180}}
+                />
+                <antd.Select
+                    value={typeFilter}
+                    onChange={(value) => this.setState({typeFilter: value})}
+                    options={typeOptions}
+                    style={{width: 130}}
+                />
+                <antd.Select
+                    value={sortBy}
+                    onChange={(value) => this.setState({sortBy: value})}
+                    options={sortOptions}
+                    style={{width: 130}}
+                />
+                <span style={{fontSize: 12, color: "#888", whiteSpace: "nowrap"}}>
+                    显示 {visibleNodes.length} / {nodeList.length}
+                </span>
+            </div>
+            <div className="node-list">
+                {visibleNodes.length > 0
+                    ? visibleNodes.map(node => this.#renderCard(node))
+                    : <div style={{padding: 20, textAlign: "center", color: "#888"}}>没有符合条件的节点</div>}
+'''
+    replace_once(path, toolbar_anchor, toolbar_new)
+
+
+
 def main() -> None:
     patch_python()
     patch_go_fetch()
     patch_go_parser()
     patch_go_node_import()
+    patch_node_list()
     print("mod injections applied")
 
 
