@@ -428,12 +428,26 @@ def patch_fork_updater() -> None:
         'https://github.com/klcb2010/merlin-box/releases/download/v\${latest_version}/',
     )
 
+
+def patch_mod_version() -> None:
+    upstream_tag = (ROOT / "mod" / "upstream-release.txt").read_text(encoding="utf-8").strip()
+    upstream_version = upstream_tag[1:] if upstream_tag.startswith("v") else upstream_tag
+    mod_version = upstream_version + ".1"
+    path = ROOT / "merlin-box.sh"
+    lines = path.read_text(encoding="utf-8").splitlines()
+    indexes = [i for i, line in enumerate(lines) if line.startswith('SCRIPT_VERSION="')]
+    if len(indexes) != 1:
+        raise RuntimeError("merlin-box.sh: SCRIPT_VERSION anchor not found uniquely")
+    lines[indexes[0]] = f'SCRIPT_VERSION="{mod_version}"'
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
 def main() -> None:
     patch_python()
     patch_go_fetch()
     patch_go_parser()
     patch_go_node_import()
     patch_node_list()
+    patch_mod_version()
     patch_fork_updater()
     print("mod injections applied")
 
