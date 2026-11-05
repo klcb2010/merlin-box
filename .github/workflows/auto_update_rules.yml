@@ -58,7 +58,7 @@ jobs:
           # 检查是否有文件改动
           if [ -n "$(git status --porcelain)" ]; then
             echo "检测到规则文件已更新，开始提交..."
-            git add .
+            git add -A -- . ':(exclude)mod' ':(exclude)mod/**'
             git commit -m "chore(auto): 自动更新规则文件"
             git push
           else
