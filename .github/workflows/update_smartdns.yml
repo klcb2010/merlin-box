@@ -40,7 +40,7 @@ jobs:
 
           if [ -n "$(git status --porcelain)" ]; then
             echo "检测到 SmartDNS 文件已更新，开始提交..."
-            git add .
+            git add -A -- . ':(exclude)mod' ':(exclude)mod/**'
             git commit -m "update smartdns"
             git push
           else
