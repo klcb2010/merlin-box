@@ -4,10 +4,8 @@
 - 支持本地刷新节点过滤列表
 - 节点过滤持久化 
 
-#### 🌐 Languages
 
-- 简体中文
-- [English](README.md)
+# 原仓库介绍
 
 基于 **ASUSWRT-Merlin** 路由器环境的 **sing-box + smartdns** 分流代理脚本方案。
 
