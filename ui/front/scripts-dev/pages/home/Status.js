@@ -178,18 +178,20 @@ class Status extends React.Component {
      * @param {string} apiUrl  后台接口
      * @param {string} title   弹层标题
      */
-    #runAction(apiUrl, title) {
+    #runAction(apiUrl, title, showLog = true) {
         window.$wslog = "";
         this.$http.sendPost({
             url: apiUrl,
             success: () => {
-                this.$helper.showLogLayer({
-                    title,
-                    okText: "关闭",
-                    onOk: () => {
-                    },
-                    content: () => window.$wslog
-                });
+                if (showLog) {
+                    this.$helper.showLogLayer({
+                        title,
+                        okText: "关闭",
+                        onOk: () => {
+                        },
+                        content: () => window.$wslog
+                    });
+                }
             }
         });
     }
@@ -198,14 +200,14 @@ class Status extends React.Component {
      * 停止代理
      */
     #stop() {
-        this.#runAction(this.$config.apis.comm_stop, "正在停止代理");
+        this.#runAction(this.$config.apis.comm_stop, "正在停止代理", false);
     }
 
     /**
      * 启动代理
      */
     #start() {
-        this.#runAction(this.$config.apis.comm_start, "正在启动代理");
+        this.#runAction(this.$config.apis.comm_start, "正在启动代理", false);
     }
 
     /**
@@ -336,7 +338,16 @@ class Status extends React.Component {
             <div className="system-actions">
                 {
                     this.state.status === 0 ? <button className="btn-primary" onClick={(e) => {
-                        this.#start();
+                        this.$helper.showAlertLayer({
+                            title: "操作提示",
+                            content: "确定要启动代理吗？",
+                            onCancel: () => {
+                                this.$helper.warning("已取消启动代理");
+                            },
+                            onOk: () => {
+                                this.#start();
+                            }
+                        });
                     }}>
                         <span className="icon-play"/>
                         启动代理
