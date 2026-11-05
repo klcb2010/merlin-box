@@ -38,14 +38,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          release_json="$(curl -fsSL https://api.github.com/repos/LandDuck/merlin-box/releases/latest)"
+          current="$(tr -d '\r\n' < mod/upstream-release.txt 2>/dev/null || true)"
+          test -n "$current"
+
+          # Push 构建只使用仓库中已同步的上游快照，避免 GitHub API 限流阻断补丁构建。
+          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            echo "tag=$current" >> "$GITHUB_OUTPUT"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if ! release_json="$(curl -fsSL --retry 2 --retry-delay 2 https://api.github.com/repos/LandDuck/merlin-box/releases/latest)"; then
+            echo "::warning::无法读取上游 Release API，使用当前已同步版本 $current 构建。"
+            echo "tag=$current" >> "$GITHUB_OUTPUT"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           tag="$(jq -r '.tag_name // empty' <<< "$release_json")"
           draft="$(jq -r '.draft' <<< "$release_json")"
           prerelease="$(jq -r '.prerelease' <<< "$release_json")"
           test -n "$tag"
           test "$draft" = "false"
           test "$prerelease" = "false"
-          current="$(tr -d '\r\n' < mod/upstream-release.txt 2>/dev/null || true)"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           if [[ "$tag" != "$current" ]]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
