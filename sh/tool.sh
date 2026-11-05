@@ -930,7 +930,7 @@ compress_executable_with_upx() {
     fi
 
     print_normal "⏳ 正在使用 upx 压缩可执行文件：$executable_path"
-    upx --lzma --ultra-brute "$executable_path" #--lzma启动时会稍微慢一些
+    upx --lzma --best "$executable_path" #保留 LZMA 压缩，避免 ultra-brute 极端耗时
     #upx --best "$executable_path"
 
     if [ $? -eq 0 ]; then
