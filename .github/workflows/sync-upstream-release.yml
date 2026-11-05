@@ -96,7 +96,9 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
+          # 默认排除全部 mod；仅允许更新上游版本记录。
+          git add -A -- . ':(exclude)mod' ':(exclude)mod/**'
+          git add -f mod/upstream-release.txt
           if ! git diff --cached --quiet; then
             git commit -m "chore(sync): import upstream release ${{ steps.upstream.outputs.tag }}"
             git push
