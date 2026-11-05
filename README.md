@@ -1,4 +1,8 @@
-# 二改   merlin-box  支持  anytls
+# 二改   
+- merlin-box  支持  anytls
+- 关闭登陆框
+- 支持本地刷新节点过滤列表
+- 节点过滤持久化 
 
 #### 🌐 Languages
 
