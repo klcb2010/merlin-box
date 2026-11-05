@@ -444,6 +444,11 @@ def patch_node_list() -> None:
                     this.#loadNodeList();
                     this.$helper.success("本地节点列表已刷新，过滤条件已保存。");
                 }}>刷新本地列表</button>
+                <button className="node-action" onClick={() => {
+                    if (this.#saveFilters()) {
+                        this.$helper.success("过滤条件已保存。");
+                    }
+                }}>保存过滤条件</button>
             </div>
             <div className="node-list">
                 {visibleNodes.length > 0
@@ -561,6 +566,58 @@ def patch_disable_login() -> None:
                 }}>退出登录</a>
 """
     replace_once(main_page, controls, "")
+
+
+def patch_default_node_live() -> None:
+    """Apply a newly selected default node by restarting sing-box only."""
+    handler_path = "ui/server/handlers/node.go"
+    handler_old = """\tif err := os.WriteFile(confPath, []byte(configJson), 0644); err != nil {
+\t\thttpHelper.ResponseFailure(w, "写入配置文件失败")
+\t\treturn
+\t}
+
+\thttpHelper.ResponseSuccess(w, "设置成功")
+"""
+    handler_new = """\tif err := os.WriteFile(confPath, []byte(configJson), 0644); err != nil {
+\t\thttpHelper.ResponseFailure(w, "写入配置文件失败")
+\t\treturn
+\t}
+
+\tif err := runServiceScriptAsync("restart_singbox"); err != nil {
+\t\thttpHelper.ResponseFailure(w, "默认节点已保存，但应用失败: "+err.Error())
+\t\treturn
+\t}
+
+\thttpHelper.ResponseSuccess(w, "默认节点已设置，正在应用")
+"""
+    replace_once(handler_path, handler_old, handler_new)
+
+    script_path = "merlin-box.sh"
+    running_anchor = """  if ! is_running_on_router; then
+      print_warning "⚠️ 当前环境非路由器，无法重启 sing-box。"
+      return 1
+  fi
+
+  start_singbox 1
+"""
+    running_replacement = """  if ! is_running_on_router; then
+      print_warning "⚠️ 当前环境非路由器，无法重启 sing-box。"
+      return 1
+  fi
+
+  if ! is_running; then
+      print_warning "merlin-box 当前未运行，默认节点配置已保存，启动时生效。"
+      return 0
+  fi
+
+  start_singbox 1
+"""
+    replace_once(script_path, running_anchor, running_replacement)
+
+    node_path = "ui/front/scripts-dev/pages/home/NodeList.js"
+    old_message = """                        this.$helper.warning("已设为默认节点，重启代理后生效。");"""
+    new_message = """                        this.$helper.success("默认节点已设置，正在立即切换 sing-box。");"""
+    replace_once(node_path, old_message, new_message)
 
 
 def patch_fork_updater() -> None:
@@ -772,6 +829,7 @@ def main() -> None:
     patch_go_parser()
     patch_go_node_import()
     patch_node_list()
+    patch_default_node_live()
     patch_subscription_filter_save()
     patch_disable_login()
     patch_remote_version()
