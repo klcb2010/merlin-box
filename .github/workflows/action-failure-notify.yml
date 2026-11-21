@@ -2,7 +2,12 @@ name: Action Failure Notify
 
 on:
   workflow_run:
-    workflows: ["*"]
+    workflows:
+      - "Auto Update Rules"
+      - "Build sing-box"
+      - "Build sing-box arm32 version"
+      - "Sync Upstream Release"
+      - "Update SmartDNS"
     types: [completed]
 
 permissions:
