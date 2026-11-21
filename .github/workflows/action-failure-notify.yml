@@ -2,6 +2,7 @@ name: Action Failure Notify
 
 on:
   workflow_run:
+    workflows: ["*"]
     types: [completed]
 
 permissions:
