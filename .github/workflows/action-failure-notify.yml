@@ -1,0 +1,86 @@
+name: Action Failure Notify
+
+on:
+  workflow_run:
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: action-failure-notify-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.name != 'Action Failure Notify'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send failure notification to PushPlus
+        env:
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          COMMIT_MESSAGE: ${{ github.event.workflow_run.head_commit.message }}
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          ACTOR: ${{ github.event.workflow_run.actor.login }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import html
+          import json
+          import os
+          import sys
+          import urllib.request
+
+          token = os.environ.get("PUSHPLUS_TOKEN", "").strip()
+          if not token:
+              print("::error::Missing repository secret: PUSHPLUS_TOKEN")
+              sys.exit(1)
+
+          values = {
+              "仓库": os.environ.get("REPOSITORY", ""),
+              "工作流": os.environ.get("WORKFLOW_NAME", ""),
+              "分支": os.environ.get("BRANCH", ""),
+              "提交者": os.environ.get("ACTOR", ""),
+              "运行编号": f"#{os.environ.get('RUN_NUMBER', '')}（第 {os.environ.get('RUN_ATTEMPT', '1')} 次尝试）",
+              "提交": os.environ.get("COMMIT_MESSAGE", "").splitlines()[0][:300],
+              "Commit SHA": os.environ.get("COMMIT_SHA", ""),
+          }
+          content = "<h3>GitHub Actions 执行失败</h3><table>"
+          for key, value in values.items():
+              content += f"<tr><td><b>{html.escape(key)}</b></td><td>{html.escape(value or '—')}</td></tr>"
+          content += "</table>"
+          run_url = os.environ.get("RUN_URL", "")
+          if run_url:
+              content += f'<p><a href="{html.escape(run_url, quote=True)}">查看失败日志</a></p>'
+
+          payload = {
+              "token": token,
+              "title": f"❌ Actions 失败：{os.environ.get('WORKFLOW_NAME', '未知工作流')}",
+              "content": content,
+              "template": "html",
+          }
+          request = urllib.request.Request(
+              "https://www.pushplus.plus/send",
+              data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(request, timeout=20) as response:
+                  result = json.loads(response.read().decode("utf-8"))
+              if str(result.get("code")) != "200":
+                  print("::error::PushPlus rejected the notification: " + str(result.get("msg", "unknown error")))
+                  sys.exit(1)
+              print("PushPlus failure notification sent.")
+          except Exception as exc:
+              print(f"::error::PushPlus request failed: {type(exc).__name__}: {exc}")
+              sys.exit(1)
+          PY
