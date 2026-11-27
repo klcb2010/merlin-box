@@ -26,7 +26,7 @@ import React from "react";
  *   "type": "vless",
  *   "tag": "vless-out",
  *
- *   "server": "127.0.0.1",                 //普通 input  必须输入  ip4或ip6
+ *   "server": "127.0.0.1",                 // IPv4 / IPv6 / domain
  *   "server_name" : "example.com",        //普通 input   这个不是标准属性, 最终会填入 tls.server_name  (可以为空,如果为空的情况下, tls.enabled=false)
  *   "server_port": 1080,                   //普通 input 只能输入数字  1->65535
  *   "uuid": "bf000d23-0752-40b4-affe-68f7707a9661", //普通 input  必须输入  uuid
@@ -289,13 +289,7 @@ class VlessForm extends React.Component {
 
         const nameError = !name || !name.trim();
 
-        const serverError =
-            !server ||
-            !(
-                server.trim().isIPv4() ||
-                server.trim().isIPv6() ||
-                server.trim().isDomain()
-            );
+        const serverError = !server || !server.isHost();
 
         const serverPortError =
             !serverPort ||
@@ -304,7 +298,7 @@ class VlessForm extends React.Component {
         const uuidError =
             !this.#isUuidValid(uuid);
         const realityPublicKeyError = realityEnabled && (!realityPublicKey || !realityPublicKey.trim());
-        const realityShortIdError = realityEnabled && (!realityShortId || !realityShortId.trim());
+        const realityShortIdError = realityEnabled && !/^(?:[0-9a-f]{2}){0,8}$/i.test(realityShortId.trim());
 
         this.setState({
             nameError,
@@ -561,7 +555,7 @@ class VlessForm extends React.Component {
                         <div className={`nlc-input ${this.state.serverError ? "error" : ""}`}>
                             <input
                                 type="text"
-                                placeholder="IPv4或IPv6"
+                                placeholder="IPv4 / IPv6 / 域名"
                                 value={this.state.server}
                                 onChange={(e) => {
                                     this.state.server = e.target.value;
@@ -717,7 +711,7 @@ class VlessForm extends React.Component {
                             <div className={`nlc-input ${this.state.realityShortIdError ? "error" : ""}`}>
                                 <input
                                     type="text"
-                                    placeholder="Reality short_id"
+                                    placeholder="可留空，最多 16 个十六进制字符，长度须为偶数"
                                     value={this.state.realityShortId}
                                     onChange={(e) => {
                                         this.state.realityShortId = e.target.value;
